@@ -6,9 +6,9 @@ namespace ZuzuCord;
 internal sealed class LoginForm : Form
 {
     private readonly Supabase api;
-    private readonly TextBox email = Ui.Input("Email address");
+    private readonly TextBox email = Ui.Input("Email or username");
     private readonly TextBox password = Ui.Input("Password");
-    private readonly Label feedback = new() { Dock = DockStyle.Fill, ForeColor = Ui.Secondary, Text = "Sign in with your Zuzify / Supabase account.", TextAlign = ContentAlignment.MiddleCenter };
+    private readonly Label feedback = new() { Dock = DockStyle.Fill, ForeColor = Ui.Secondary, Text = "Use your email or ZuzuCord username.", TextAlign = ContentAlignment.MiddleCenter };
     private readonly Button signIn = Ui.Button("Sign in", 140);
     private readonly Button signUp = Ui.Button("Create account", 150);
     public LoginForm(Supabase client)
@@ -39,14 +39,24 @@ internal sealed class LoginForm : Form
     }
     private async Task Submit(bool create)
     {
-        if (!email.Text.Contains('@') || password.Text.Length < 6) { feedback.Text = "Enter a valid email and a password of at least 6 characters."; return; }
+        if (string.IsNullOrWhiteSpace(email.Text) || password.Text.Length < (create && !email.Text.Contains('@') ? 10 : 6))
+        {
+            feedback.Text = create && !email.Text.Contains('@') ? "Username sign-up requires a password of 10+ characters." : "Enter an email/username and a password of at least 6 characters.";
+            return;
+        }
         signIn.Enabled = signUp.Enabled = false;
         feedback.Text = create ? "Creating account…" : "Signing in…";
         try
         {
-            if (create) await api.SignUpAsync(email.Text.Trim(), password.Text);
+            if (create)
+            {
+                if (email.Text.Contains('@')) await api.SignUpAsync(email.Text.Trim(), password.Text);
+                else await api.RegisterUsernameAsync(email.Text.Trim().ToLowerInvariant(), password.Text);
+            }
             else await api.SignInAsync(email.Text.Trim(), password.Text);
-            if (api.Current is null) feedback.Text = "Account created. Check your email for a confirmation link, then sign in.";
+            if (api.Current is null) feedback.Text = create && !email.Text.Contains('@')
+                ? "Username account created. Click Sign in to continue."
+                : "Account created. If prompted, check your email for a confirmation link, then sign in.";
             else { DialogResult = DialogResult.OK; Close(); }
         }
         catch (Exception e) { feedback.Text = e.Message; }
