@@ -207,6 +207,12 @@ function App() {
   };
   const openModal = (next: ModalName) => {
     setModal(next); setModalValue(''); setModalOther(''); setStatus('');
+    if (next === 'boost' && me) {
+      void appApi.wallet(me).then(wallet => {
+        setWalletCrystals(wallet.crystals);
+        setLegacyCredits(wallet.legacyCredits);
+      }).catch(showError);
+    }
   };
 
   const loadServers = useCallback(async () => {
@@ -566,6 +572,8 @@ function App() {
             onClick={() => serverSelect(null)}><Globe2 size={23} /></button>
           <button title="Official ZuzuCord announcements" className="realm-bubble official-rail"
             onClick={() => openModal('announcements')}><ShieldCheck size={22} /></button>
+          <button title="Crystals wallet and server perks" className="realm-bubble crystals-rail"
+            onClick={() => openModal('boost')}><Gem size={21} /></button>
           <div className="rail-space" />
           <IconButton label="Create server" onClick={() => openModal('new-server')}><Plus size={23} /></IconButton>
           <IconButton label="Join server" onClick={() => openModal('join-server')}><ServerIcon size={18} /></IconButton>
@@ -579,7 +587,7 @@ function App() {
           <div className="server-divider" />
           {servers.map((server, index) => <button className={'server-circle ' + (selectedServer === server.id ? 'current' : '')}
             key={server.id} onClick={() => serverSelect(server.id)} title={server.name}
-            style={{ '--bubble-color': colors[index % colors.length] } as CSSProperties}>
+            style={{ '--bubble-color': server.accent_color || colors[index % colors.length] } as CSSProperties}>
             {initials(server.name)}
           </button>)}
           <IconButton label="Create another server" onClick={() => openModal('new-server')}><Plus size={19} /></IconButton>
@@ -621,6 +629,14 @@ function App() {
           </div>
         </section>
         <section className="main-pane">
+          {view === 'channel' && selectedServer && currentServer && boostLevel >= 1 &&
+            <div className="boosted-server-ribbon" style={{
+              '--server-accent':currentServer.accent_color || '#a978ff',
+              '--server-gradient':boostLevel>=2 ? currentServer.gradient_color || '#0c0715' : '#0c0715'
+            } as CSSProperties}>
+              <span><Sparkles size={15}/> {currentServer.name}</span>
+              <strong>{boostLevel===3?'LEVEL 3 · BOOSTED SERVER':'BOOST LEVEL '+boostLevel}</strong>
+            </div>}
           <div className="content-toolbar">
             <div className="toolbar-heading">
               {view === 'friends' ? <><Users size={21} /><strong>Friends</strong></> :
@@ -790,7 +806,7 @@ function App() {
         : modal === 'boost' ? <CrystalCenter userId={me} serverId={selectedServer}
           serverName={currentServer?.name || ''} isOwner={isOwner}
           level={boostLevel} crystals={walletCrystals} legacyCredits={legacyCredits}
-          onBoost={boostSelectedServer} onMessage={setStatus} />
+          onBoost={boostSelectedServer} onMessage={setStatus} onSaved={loadServers} />
         : modal === 'install-bot' ? <div className="modal-body">
           <p className="muted">Install developer-created ZuzuCord bots in your server. A bot can only post after its server owner approves installation.</p>
           {botApps.length===0?<p className="muted">No bot applications are available.</p>:
