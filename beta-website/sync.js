@@ -7,6 +7,9 @@
   const publicSuffix = "@zuzucord.com";
   const $ = name => document.getElementById(name);
   let accessToken = null;
+  let refreshToken = null;
+  let accessExpiresAt = 0;
+  let renewing = null;
   let accountId = null;
   let authId = null;
   let saving = false;
@@ -24,11 +27,32 @@
     if (input.includes("@") && !input.endsWith(publicSuffix)) return input;
     throw new Error("Enter a valid ZuzuCord ID or existing account email.");
   };
+  async function ensureSession() {
+    if (!accessToken || !accountId) throw new Error("Sign in again to access beta sync.");
+    if (Date.now() < accessExpiresAt - 60000) return;
+    if (!refreshToken) { signOut(); throw new Error("Session expired. Sign in again."); }
+    if (!renewing) renewing = (async () => {
+      const response = await fetch(URL + "/auth/v1/token?grant_type=refresh_token", {
+        method: "POST",
+        headers: { "apikey": KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        credentials: "omit", cache: "no-store"
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.access_token || !data.refresh_token)
+        throw new Error("Your session expired. Sign in again.");
+      accessToken = data.access_token;
+      refreshToken = data.refresh_token;
+      accessExpiresAt = Date.now() + Math.max(60, Number(data.expires_in) || 3600) * 1000;
+    })().finally(() => { renewing = null; });
+    try { await renewing; }
+    catch (error) { signOut(); throw error; }
+  }
   async function request(path, { method = "GET", body = undefined, authorized = false, prefer = undefined } = {}) {
     const headers = { "apikey": KEY, "Accept": "application/json" };
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (authorized) {
-      if (!accessToken) throw new Error("You are not signed in. Sign in again.");
+      await ensureSession();
       headers["Authorization"] = "Bearer " + accessToken;
     }
     if (prefer) headers["Prefer"] = prefer;
@@ -65,6 +89,8 @@
   }
   function signOut() {
     accessToken = null;
+    refreshToken = null;
+    accessExpiresAt = 0;
     accountId = null;
     authId = null;
     $("login-secret").value = "";
@@ -74,12 +100,23 @@
     setStatus("Signed out of the beta website. Your Windows app login was not changed.");
   }
   async function loadTheme() {
-    const data = await request("/rest/v1/zuzucord_beta_sync?select=theme,accent,sync_enabled&user_id=eq." +
+    const servers = await request("/rest/v1/zuzucord_servers?select=id,name&order=name.asc",
+      { authorized: true });
+    const selector = $("active-server");
+    selector.replaceChildren(new Option("Public rooms (no server)", ""));
+    for (const server of Array.isArray(servers) ? servers : []) {
+      if (typeof server.id === "string" && typeof server.name === "string") {
+        selector.add(new Option(server.name, server.id));
+      }
+    }
+    const data = await request("/rest/v1/zuzucord_beta_sync?select=theme,accent,sync_enabled,last_server_id&user_id=eq." +
       encodeURIComponent(accountId), { authorized: true });
     const record = Array.isArray(data) ? data[0] : null;
     $("theme-choice").value = validTheme(record?.theme);
     $("accent-choice").value = validAccent(record?.accent);
     $("sync-toggle").checked = record?.sync_enabled === true;
+    selector.value = record?.last_server_id || "";
+    if (selector.selectedIndex < 0) selector.value = "";
     setPreview();
   }
   async function signIn(event) {
@@ -96,6 +133,8 @@
       $("login-secret").value = "";
       if (!session?.access_token || !session?.user?.id) throw new Error("Could not establish a secure session.");
       accessToken = session.access_token;
+      refreshToken = session.refresh_token || null;
+      accessExpiresAt = Date.now() + Math.max(60, Number(session.expires_in) || 3600) * 1000;
       accountId = session.user.id;
       const eligible = await request("/rest/v1/rpc/zuzucord_is_beta_tester", {
         method: "POST", body: {}, authorized: true
@@ -111,7 +150,7 @@
       $("sync-panel").hidden = false;
       setStatus("Approved beta tester. Edit your colors, then save.");
     } catch (error) {
-      accessToken = null; accountId = null;
+      accessToken = null; refreshToken = null; accessExpiresAt = 0; accountId = null;
       $("login-secret").value = "";
       setStatus(error instanceof Error ? error.message : "Could not verify your account.", true);
     } finally { button.disabled = false; }
@@ -131,10 +170,11 @@
           theme: validTheme($("theme-choice").value),
           accent: validAccent($("accent-choice").value),
           sync_enabled: $("sync-toggle").checked,
+          last_server_id: $("active-server").value || null,
           updated_at: new Date().toISOString()
         }
       });
-      setStatus("Preferences saved. Enable beta sync in the Windows app to apply the colors there.");
+      setStatus("Saved. The Windows app will pull your theme and selected server when sync is enabled.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Sync failed. Sign in again if your session expired.", true);
     } finally { saving = false; button.disabled = false; }
@@ -142,6 +182,10 @@
   document.addEventListener("DOMContentLoaded", () => {
     $("signin-form").addEventListener("submit", signIn);
     $("sync-save").addEventListener("click", saveTheme);
+    $("sync-reload").addEventListener("click", async () => {
+      try { await loadTheme(); setStatus("Latest app and website preferences loaded."); }
+      catch (error) { setStatus(error instanceof Error ? error.message : "Unable to refresh.", true); }
+    });
     $("sync-signout").addEventListener("click", signOut);
     $("theme-choice").addEventListener("change", setPreview);
     $("accent-choice").addEventListener("input", setPreview);
