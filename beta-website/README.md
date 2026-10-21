@@ -1,28 +1,28 @@
-# ZuzuCord V2 — Website
+# ZuzuCord beta website (Vercel root)
 
-The standalone static website includes:
-- true-black OLED color palette;
-- user-supplied icon and banner, optimized to WebP for web delivery;
-- mouse-follow tilt and clickable channel preview (**illustrative, no real messages sent**);
-- GitHub release downloads and repository/build statistics;
-- real **ZuzuCord-only** account count, accounts registered since 00:00 UTC, active bans, and public message totals, fetched via an aggregate Supabase RPC;
-- email-free **username + password registration**, via the server-side `zuzucord-register` Edge Function;
-- privacy overview and community guidelines.
+This folder is self-contained and ready to deploy as a separate Vercel site.
 
-### Important account details
+**Vercel settings:** GitHub repository `taithedev/Zuzucord`, production branch `main`, Root Directory `beta-website`, Framework Preset `Other`, no build command. Static files are served from this folder.
 
-The website **only creates accounts**. Users sign into the Windows application to access chats. Username-only users have an internal non-deliverable identifier, so **email password recovery is unavailable**. Signup requests are rate limited; passwords are sent only to the registration function and Supabase Auth over HTTPS, not to GitHub or the static host.
+- `index.html`: experimental download/registration site.
+- `sync.html`: approved-tester-only website-to-Windows appearance sync.
+- `sync.js`: Supabase Auth sign-in and authorized RLS access.
+- `beta.css`: OLED interface and responsive beta controls.
+- `app.js`: GitHub statistics, Supabase aggregate counts and web-only account registration.
+- `vercel.json`: static hosting defaults.
 
-Never put Supabase service-role keys or private credentials in website code. The included publishable key is intended for public browser use; all data access must be restricted by RLS and server-side function authorization.
+## Security
 
-### Host
+The public beta website can be viewed by anyone; **only approved testers can sign in and use app theme sync**. Beta access is off by default. Approve a ZuzuCord username in the existing Zuzify Supabase project using its privileged SQL Editor:
 
-Deploy the `website/` folder to a static host (Vercel root directory `website`, or GitHub Pages). GitHub Actions currently provides an optional manual Pages workflow. Creating/updating repository files alone does not publish a website URL.
+```sql
+insert into public.zuzucord_beta_testers (user_id, enabled)
+select user_id, true from public.zuzucord_accounts where username = 'tester_username'
+on conflict (user_id) do update set enabled = excluded.enabled;
+```
 
-### Beta testers
+The `zuzucord_is_beta_tester` RPC and RLS on `zuzucord_beta_sync` validate actual JWT identity; no website checkbox grants access. The Windows user also opts into beta sync in **Appearance**. The feature synchronizes theme preset and accent, not chat history or Windows credentials.
 
-Branch `beta-website` has an experimental UI and bug-report links. Keep its deployment separate from main to avoid overwriting the stable site.
+Website access tokens stay in memory only. Reloading requires sign-in again; passwords are never stored in the website. Only publishable Supabase keys are exposed. Do not deploy service-role keys in frontend code.
 
-## Public login alias
-
-ZuzuCord sign-in IDs are shown as `username@zuzucord.com`. These are **aliases, not actual mailboxes**. The Supabase database generates the alias from each unique username; the Auth service retains its internal reserved identifier so earlier accounts are not invalidated. Password recovery by email is not available for this flow.
+For independent deploys of stable and beta, configure separate Vercel projects with distinct root directories (`website` and `beta-website`).
