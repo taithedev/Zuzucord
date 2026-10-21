@@ -8,6 +8,9 @@
     <AssemblyName>ZuzuCord</AssemblyName>
     <ApplicationTitle>ZuzuCord V2</ApplicationTitle>
     <ApplicationIcon>Assets/zuzucord.ico</ApplicationIcon>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Siticone.NetCore.UI" Version="2026.9.9" />
+  </ItemGroup>
 </Project>
