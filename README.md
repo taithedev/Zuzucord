@@ -1,6 +1,6 @@
 # ZuzuCord V2
 
-## New React Windows Desktop (v0.7 preview)
+## New React Windows Desktop (v0.8 preview)
 
 **New primary UI direction:** `desktop-react/` is a separate, packaged Windows app using **React 19 + TypeScript + Electron**, with a dark OLED Discord-inspired friends/community layout based on the provided screenshot. It is a **Windows application**, not a browser tab or a discord.com wrapper.
 
@@ -8,7 +8,7 @@
 - Native window controls, community channels, editable profiles, bot messages and activities drawn from existing Supabase data
 - Reworked Appearance editor for colors, OLED/Graphite/Midnight, two-stop gradients, ambient glow, motion and compact UI
 - Secure saved login using Windows Electron `safeStorage` with an OS-account encrypted token
-- Approved-beta-only sync of accent, gradients, effects and home server via `beta-website/sync.html`
+- Production account sync for all registered users via `website/sync.html`, including gradient, accent, motion, glass and preferred server
 - Existing C# WinForms app remains in `src/ZuzuCord/` as the legacy preview while the new desktop UI is validated
 
 **Build on Windows**: `cd desktop-react && npm install && npm run build:win`. The new installer and ZIP are produced in `desktop-react/release/` and published through `.github/workflows/react-desktop.yml`. Read `desktop-react/README.md` for implementation and known feature limits.
