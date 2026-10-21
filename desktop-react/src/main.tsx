@@ -140,6 +140,7 @@ function App() {
   const [profileStatus, setProfileStatus] = useState('');
   const [botEnabled, setBotEnabled] = useState(true);
   const messagesBottom = useRef<HTMLDivElement | null>(null);
+  const quickSearch = useRef<HTMLInputElement | null>(null);
   const loadedBeta = useRef(false);
   const me = session?.user.id || '';
   const currentServer = servers.find(s => s.id === selectedServer) || null;
@@ -169,6 +170,21 @@ function App() {
   useEffect(() => {
     saveLocalAppearance(appearance);
   }, [appearance]);
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        quickSearch.current?.focus();
+      }
+      if (event.ctrlKey && event.key === ',') {
+        event.preventDefault();
+        setModal('settings');
+      }
+      if (event.key === 'Escape') setModal(null);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const showError = (error: unknown) => {
     setStatus(getError(error));
@@ -435,7 +451,9 @@ function App() {
           <IconButton label="Create another server" onClick={() => openModal('new-server')}><Plus size={19} /></IconButton>
         </nav>
         <section className="sidebar">
-          <div className="sidebar-search"><Search size={16} /><span>Find or start a conversation</span><kbd>Ctrl K</kbd></div>
+          <label className="sidebar-search"><Search size={16} /><input ref={quickSearch}
+            placeholder="Find a friend or channel" aria-label="Search friends and channels"
+            value={query} onChange={e => setQuery(e.target.value)} /><kbd>Ctrl K</kbd></label>
           <button className={'sidebar-nav-button ' + (view === 'friends' ? 'selected' : '')}
             onClick={() => { setView('friends'); setSelectedFriend(null); }}><Users size={19} /> Friends {pendingCount > 0 && <b className="count-chip">{pendingCount}</b>}</button>
           <button className="sidebar-nav-button" onClick={() => openModal('add-friend')}><UserPlus size={19} /> Add Friend</button>
