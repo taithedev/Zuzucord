@@ -25,7 +25,7 @@ internal static class Ui
     public static readonly Color Side = Color.FromArgb(9, 9, 11);
     public static readonly Color Secondary = Color.FromArgb(173, 173, 181);
     public static readonly Font Font = new("Segoe UI", 10);
-    public static Button Button(string text, int width) => new()
+    public static Button Button(string text, int width) => new ZuzuButton()
     {
         Text = text, Width = width, Height = 38, BackColor = Color.FromArgb(32, 32, 38),
         ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Margin = new Padding(4),
