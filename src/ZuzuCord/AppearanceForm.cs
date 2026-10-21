@@ -25,6 +25,7 @@ internal sealed class AppearanceForm : Form
     };
     private readonly Button changeColor = Ui.Button("Choose accent color", 200);
     private readonly Button save = Ui.Button("Apply & save", 150);
+    private readonly Button import = Ui.Button("Import website colors", 190);
     private Color selectedColor;
     private bool hasBeta;
 
@@ -40,9 +41,9 @@ internal sealed class AppearanceForm : Form
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill, Padding = new Padding(28),
-            ColumnCount = 1, RowCount = 9, BackColor = ThemeColors.Background
+            ColumnCount = 1, RowCount = 10, BackColor = ThemeColors.Background
         };
-        foreach (int height in new[] { 52, 42, 34, 50, 34, 55, 60, 0, 60 })
+        foreach (int height in new[] { 52, 42, 34, 50, 34, 55, 60, 0, 48, 60 })
             layout.RowStyles.Add(height == 0 ? new RowStyle(SizeType.Percent, 100)
                 : new RowStyle(SizeType.Absolute, height));
 
@@ -76,7 +77,9 @@ internal sealed class AppearanceForm : Form
         footer.Controls.Add(save);
         var reset = Ui.Button("Restore defaults", 160);
         footer.Controls.Add(reset);
-        layout.Controls.Add(footer, 0, 8);
+        import.Enabled = false;
+        layout.Controls.Add(import, 0, 8);
+        layout.Controls.Add(footer, 0, 9);
         Controls.Add(layout);
 
         changeColor.Click += (_, _) =>
@@ -99,6 +102,7 @@ internal sealed class AppearanceForm : Form
             detail.Text = "OLED Black and the original neutral accent are selected. Click Apply & save.";
         };
         save.Click += async (_, _) => await SaveAsync();
+        import.Click += async (_, _) => await ImportWebsiteAsync();
         Shown += async (_, _) => await CheckBetaAsync();
     }
 
@@ -108,6 +112,7 @@ internal sealed class AppearanceForm : Form
         {
             hasBeta = await api.IsBetaTesterAsync();
             betaSync.Enabled = hasBeta;
+            import.Enabled = hasBeta;
             detail.Text = hasBeta
                 ? "Approved beta account. You can synchronize your theme and color across website and desktop."
                 : "Website sync is reserved for invited beta testers; local color editing is available to everyone.";
@@ -116,8 +121,31 @@ internal sealed class AppearanceForm : Form
         {
             hasBeta = false;
             betaSync.Enabled = false;
+            import.Enabled = false;
             detail.Text = "Could not check beta access. Local color editing is still available.";
         }
+    }
+
+    private async Task ImportWebsiteAsync()
+    {
+        if (!hasBeta) return;
+        import.Enabled = false;
+        try
+        {
+            var remote = await api.ReadBetaThemeAsync();
+            if (remote is null)
+            {
+                detail.Text = "No website theme saved yet. Choose colors and apply, then edit from the beta website.";
+                return;
+            }
+            themes.SelectedIndex = remote.Theme switch { "graphite" => 1, "midnight" => 2, _ => 0 };
+            selectedColor = ColorTranslator.FromHtml(ThemeColors.NormalizeAccent(remote.Accent));
+            sample.BackColor = selectedColor;
+            betaSync.Checked = remote.SyncEnabled;
+            detail.Text = "Website settings loaded. Click Apply & save to use them in your Windows app.";
+        }
+        catch (Exception error) { detail.Text = "Unable to import website settings: " + error.Message; }
+        finally { import.Enabled = hasBeta; }
     }
 
     private async Task SaveAsync()
