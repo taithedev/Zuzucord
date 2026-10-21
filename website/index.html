@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#09090b">
   <meta name="description" content="ZuzuCord V2, a Windows community client. Download the latest Windows build and view real GitHub project statistics.">
-  <title>ZuzuCord V2 — Windows App & Project Stats</title>
+  <title>ZuzuCord V2 — Download & Community</title>
+  <link rel="icon" type="image/webp" href="./assets/zuzucord-icon.webp">
+  <meta property="og:image" content="https://raw.githubusercontent.com/taithedev/Zuzucord/main/website/assets/zuzucord-banner.webp">
+  <meta name="application-name" content="ZuzuCord V2">
   <link rel="stylesheet" href="./styles.css">
   <script src="./app.js" defer></script>
 </head>
@@ -14,15 +17,15 @@
   <header class="topbar">
     <nav class="nav container" aria-label="Primary navigation">
       <a class="brand" href="#home" aria-label="ZuzuCord home"><span class="brandmark" aria-hidden="true"><span></span><span></span></span><span>Zuzu<span class="muted-brand">Cord</span></span><span class="version-tag">V2</span></a>
-      <div class="nav-links"><a href="#features">Features</a><a href="#stats">Statistics</a><a href="#downloads">Downloads</a><a href="#questions">FAQ</a></div>
+      <div class="nav-links"><a href="#features">Features</a><a href="#stats">Statistics</a><a href="#account">Create account</a><a href="#downloads">Downloads</a><a href="#questions">FAQ</a></div>
       <a class="nav-github" href="https://github.com/taithedev/Zuzucord" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
     </nav>
   </header>
 
   <main id="main">
     <section class="hero container" id="home" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <div class="eyebrow"><span class="status-dot"></span> ZUZUCORD / DESKTOP / VERSION 2</div>
+      <div class="hero-copy"><img src="./assets/zuzucord-banner.webp" class="hero-banner" width="640" height="320" alt="ZuzuCord brand banner in white and grey on black">
+        <div class="eyebrow"><span class="status-dot"></span> ZUZUCORD / COMMUNITY / VERSION 2</div>
         <h1 id="hero-title">Your space.<br><span>Your conversations.</span></h1>
         <p class="hero-lead">A dedicated Windows community client with channels, messaging, and one connected account. Made for the communities you build.</p>
         <div class="hero-actions">
@@ -33,16 +36,16 @@
         <div class="hero-details"><span>Windows 10 / 11</span><span class="bullet">•</span><span>64-bit</span><span class="bullet">•</span><span>Built with C# & .NET</span></div>
       </div>
 
-      <div class="preview-wrap">
+      <div class="preview-wrap" id="interactive-preview" tabindex="0" aria-label="Interactive desktop preview; move the mouse to tilt and select a sample channel" title="Move your mouse to inspect the preview">
         <div class="preview-window" aria-label="Illustrative preview of the ZuzuCord desktop layout">
-          <div class="window-top"><div class="window-symbol"><span></span><span></span></div><strong>ZuzuCord</strong><span class="window-version">V2 · Desktop</span><span class="window-buttons" aria-hidden="true">─ &nbsp; □ &nbsp; ×</span></div>
+          <div class="window-top"><img class="window-app-icon" src="./assets/zuzucord-icon.webp" alt=""><div class="window-symbol" hidden><span></span><span></span></div><strong>ZuzuCord</strong><span class="window-version">V2 · Desktop</span><span class="window-buttons" aria-hidden="true">─ &nbsp; □ &nbsp; ×</span></div>
           <div class="preview-body">
             <aside class="preview-rail" aria-hidden="true"><span class="rail-active">Z</span><span>+</span><span>⌕</span><span class="rail-bottom">⚙</span></aside>
-            <aside class="preview-channels"><div class="small-title">YOUR COMMUNITY <span>⌄</span></div><p class="channel-group">TEXT CHANNELS</p><div class="channel active"># &nbsp;general</div><div class="channel"># &nbsp;introductions</div><div class="channel"># &nbsp;development</div><p class="channel-group">YOUR ACCOUNT</p><div class="channel"><span class="avatar-mini"></span> You</div></aside>
-            <div class="preview-chat"><div class="preview-chat-top"># &nbsp;general <span>⌕ &nbsp; ◦ ◦ ◦</span></div><div class="chat-illustration"><span class="big-hash">#</span><h3>Welcome to your space.</h3><p>Pick a channel to get started.</p></div><div class="fake-composer">Message #general <span>＋</span></div></div>
+            <aside class="preview-channels"><div class="small-title">YOUR COMMUNITY <span>⌄</span></div><p class="channel-group">TEXT CHANNELS</p><button type="button" class="channel active" data-demo-channel="general"># &nbsp;general</button><button type="button" class="channel" data-demo-channel="introductions"># &nbsp;introductions</button><button type="button" class="channel" data-demo-channel="development"># &nbsp;development</button><p class="channel-group">YOUR ACCOUNT</p><div class="channel"><span class="avatar-mini"></span> You</div></aside>
+            <div class="preview-chat"><div class="preview-chat-top"><span id="demo-channel-title"># &nbsp;general</span> <span>⌕ &nbsp; ◦ ◦ ◦</span></div><div class="chat-illustration"><span class="big-hash">#</span><h3 id="demo-heading">Welcome to your space.</h3><p id="demo-description">Pick a channel to get started. Click a channel to try the preview.</p></div><div class="fake-composer" id="demo-compose">Message #general <span>＋</span></div></div>
           </div>
         </div>
-        <p class="preview-caption">INTERFACE PREVIEW · Illustrative layout, not a live session</p>
+        <p class="preview-caption">INTERACTIVE DEMO · Move your mouse to tilt · Click channels · No messages are sent</p>
       </div>
     </section>
 
@@ -55,6 +58,18 @@
         <div class="stat"><span class="stat-label">Latest Windows build</span><strong class="build-status" id="stat-build">—</strong><small id="build-detail">Checking GitHub Actions</small></div>
       </div>
       <div class="stats-footer"><span id="updated-at">Checking GitHub data…</span><button class="text-button" id="refresh-stats" type="button">↻ &nbsp; Refresh statistics</button></div>
+    </section>
+
+    
+    <section class="section container" id="community" aria-labelledby="community-heading">
+      <div class="section-top"><div><p class="kicker">THE COMMUNITY</p><h2 id="community-heading">Real community statistics<span class="period">.</span></h2></div><p class="section-description">Counts reflect ZuzuCord-specific records only, never accounts from other projects sharing Supabase. Today is counted in UTC.</p></div>
+      <div class="stats-grid community-grid" aria-live="polite">
+        <div class="stat"><span class="stat-label">Total registered users</span><strong id="community-users">—</strong><small>ZuzuCord accounts</small></div>
+        <div class="stat"><span class="stat-label">Accounts created today</span><strong id="community-today">—</strong><small>Since 00:00 UTC</small></div>
+        <div class="stat"><span class="stat-label">Currently banned</span><strong id="community-banned">—</strong><small>Active ZuzuCord restrictions</small></div>
+        <div class="stat"><span class="stat-label">Community messages</span><strong id="community-messages">—</strong><small>Messages sent in public rooms</small></div>
+      </div>
+      <p class="stats-disclosure" id="community-updated" role="status">Loading aggregate data from Supabase…</p>
     </section>
 
     <section class="section container" id="features" aria-labelledby="features-heading">
@@ -77,9 +92,30 @@
       <div class="download-details"><p><strong>How to install:</strong> Use a published release asset when available. For a development build, open GitHub Actions, select a successful Windows build, and download its artifact (GitHub sign-in may be required). Extract the ZIP, then run ZuzuCord.exe.</p><p><strong>Note:</strong> ZuzuCord is its own social application, not Discord. It does not connect to Discord user accounts.</p></div>
     </section>
 
+    
+    <section class="section container signup-section" id="account" aria-labelledby="account-heading">
+      <div class="signup-copy">
+        <p class="kicker">GET STARTED BEFORE DOWNLOADING</p><h2 id="account-heading">Claim your username<span class="period">.</span></h2>
+        <p>Create a ZuzuCord account without entering an email address. This page only creates the account. Sign in inside the Windows application to start chatting.</p>
+        <div class="signup-note"><strong>No email required</strong><span>Because an email isn't attached, password recovery by email is unavailable. Keep your username and password somewhere safe. Do not reuse an important password.</span></div>
+      </div>
+      <form id="register-form" class="register-form" autocomplete="off">
+        <div class="form-head"><img src="./assets/zuzucord-icon.webp" alt="" width="42" height="42"><div><strong>Create a ZuzuCord ID</strong><span>Username + password</span></div></div>
+        <label for="reg-username">Username</label>
+        <div class="field-prefix"><span>@</span><input id="reg-username" name="username" autocomplete="username" minlength="3" maxlength="24" pattern="[a-zA-Z0-9_]{3,24}" placeholder="your_username" required spellcheck="false"></div>
+        <label for="reg-password">Password <span class="field-hint">at least 10 characters</span></label>
+        <input id="reg-password" type="password" name="password" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="Enter a secure password">
+        <label for="reg-confirm">Confirm password</label>
+        <input id="reg-confirm" type="password" name="confirm" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="Repeat your password">
+        <label class="confirm-check"><input type="checkbox" id="reg-terms" required><span>I understand this is a ZuzuCord account and email-free password recovery is not available.</span></label>
+        <button class="button button-light register-submit" type="submit" id="reg-submit">Create my account <span aria-hidden="true">↗</span></button>
+        <p id="reg-result" class="form-result" role="status" aria-live="polite">Already have an account? Sign in through the Windows app.</p>
+      </form>
+    </section>
+
     <section class="section container" id="questions" aria-labelledby="faq-heading">
       <div class="section-top"><div><p class="kicker">GOOD TO KNOW</p><h2 id="faq-heading">Questions<span class="period">.</span></h2></div></div>
-      <div class="faq"><details><summary>Is ZuzuCord a Discord client?</summary><p>No. ZuzuCord V2 is an independent community messaging application. It is not affiliated with Discord Inc.</p></details><details><summary>Where do download counts come from?</summary><p>GitHub's public Releases API. Downloads count published release assets, not all users, installations, or GitHub Actions artifacts.</p></details><details><summary>Does the desktop app need internet?</summary><p>Yes. Its account and messaging features connect to Supabase. The Windows client itself is written in C#.</p></details><details><summary>Do I need to create another account?</summary><p>ZuzuCord V2 connects to the same Supabase Auth project as ZuzifySocials. Existing email/password accounts can be used if enabled in Supabase Auth.</p></details></div>
+      <div class="faq"><details><summary>Is ZuzuCord a Discord client?</summary><p>No. ZuzuCord V2 is an independent community messaging application. It is not affiliated with Discord Inc.</p></details><details><summary>Where do download counts come from?</summary><p>GitHub's public Releases API. Downloads count published release assets, not all users, installations, or GitHub Actions artifacts.</p></details><details><summary>Does the desktop app need internet?</summary><p>Yes. Its account and messaging features connect to Supabase. The Windows client itself is written in C#.</p></details><details><summary>Can I sign up without an email?</summary><p>Yes. The username registration form creates an account that can be used in the Windows app. No email means no email-based password recovery. Existing ZuzifySocials email/password accounts can also sign in inside the app.</p></details></div>
     </section>
   </main>
   <footer><div class="container footer-inner"><div class="brand"><span class="brandmark" aria-hidden="true"><span></span><span></span></span>ZuzuCord <span class="version-tag">V2</span></div><p>Independent community software. © 2026 ZuzuCord.</p><a href="https://github.com/taithedev/Zuzucord">View source ↗</a></div></footer>
