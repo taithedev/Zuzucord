@@ -6,9 +6,9 @@ namespace ZuzuCord;
 internal sealed class LoginForm : Form
 {
     private readonly Supabase api;
-    private readonly TextBox email = Ui.Input("Email or username");
+    private readonly TextBox email = Ui.Input("Username or username@zuzucord.com");
     private readonly TextBox password = Ui.Input("Password");
-    private readonly Label feedback = new() { Dock = DockStyle.Fill, ForeColor = Ui.Secondary, Text = "Use your email or ZuzuCord username.", TextAlign = ContentAlignment.MiddleCenter };
+    private readonly Label feedback = new() { Dock = DockStyle.Fill, ForeColor = Ui.Secondary, Text = "Sign in with your ZuzuCord ID or existing account email.", TextAlign = ContentAlignment.MiddleCenter };
     private readonly Button signIn = Ui.Button("Sign in", 140);
     private readonly Button signUp = Ui.Button("Create account", 150);
     public LoginForm(Supabase client)
@@ -25,14 +25,14 @@ internal sealed class LoginForm : Form
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 45));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
-        layout.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "ZuzuCord V2\nYour community, one place.", Font = new Font("Segoe UI Semibold", 19), TextAlign = ContentAlignment.MiddleCenter }, 0, 0);
+        layout.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "ZUZUCORD\nYour community. One place.", Font = new Font("Segoe UI Semibold", 19), TextAlign = ContentAlignment.MiddleCenter }, 0, 0);
         layout.Controls.Add(email, 0, 1);
         layout.Controls.Add(password, 0, 2);
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight };
         actions.Controls.Add(signIn); actions.Controls.Add(signUp);
         layout.Controls.Add(actions, 0, 3);
         layout.Controls.Add(feedback, 0, 4);
-        Controls.Add(layout);
+        Controls.Add(layout); Controls.Add(SiticoneShell.Accent());
         signIn.Click += async (_, _) => await Submit(false);
         signUp.Click += async (_, _) => await Submit(true);
         AcceptButton = signIn;
@@ -55,7 +55,7 @@ internal sealed class LoginForm : Form
             }
             else await api.SignInAsync(email.Text.Trim(), password.Text);
             if (api.Current is null) feedback.Text = create && !email.Text.Contains('@')
-                ? "Username account created. Click Sign in to continue."
+                ? "Account created. Sign in with " + email.Text.Trim().ToLowerInvariant() + "@zuzucord.com."
                 : "Account created. If prompted, check your email for a confirmation link, then sign in.";
             else { DialogResult = DialogResult.OK; Close(); }
         }
