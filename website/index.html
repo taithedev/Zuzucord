@@ -81,7 +81,7 @@
         <article class="feature"><span class="feature-icon" aria-hidden="true">#</span><h3>Organized channels</h3><p>Switch between community rooms without leaving the desktop app.</p></article>
         <article class="feature"><span class="feature-icon" aria-hidden="true">↗</span><h3>Connected messaging</h3><p>Read and send messages using ZuzuCord's Supabase-backed chat system.</p></article>
         <article class="feature"><span class="feature-icon" aria-hidden="true">⌘</span><h3>Native Windows application</h3><p>A standalone C# desktop application, not an embedded Discord website.</p></article>
-        <article class="feature"><span class="feature-icon" aria-hidden="true">◈</span><h3>Account access</h3><p>Sign in through the shared Zuzify authentication project; session credentials stay in memory.</p></article>
+        <article class="feature"><span class="feature-icon" aria-hidden="true">◈</span><h3>Friends and direct messages</h3><p>Send friend requests and privately message accepted friends in the Windows app.</p></article><article class="feature"><span class="feature-icon" aria-hidden="true">◇</span><h3>Account access</h3><p>Sign in through the shared Zuzify authentication project; session credentials stay in memory.</p></article>
       </div>
     </section>
 
@@ -99,7 +99,7 @@
     <section class="section container signup-section" id="account" aria-labelledby="account-heading">
       <div class="signup-copy">
         <p class="kicker">GET STARTED BEFORE DOWNLOADING</p><h2 id="account-heading">Claim your username<span class="period">.</span></h2>
-        <p>Create a ZuzuCord account without entering an email address. This page only creates the account. Sign in inside the Windows application to start chatting.</p>
+        <p>Create a ZuzuCord account without entering an email address. This page only creates the account. Sign in inside the Windows application to start chatting. ZuzuCord is intended for users aged 13 and older.</p>
         <div class="signup-note"><strong>No email required</strong><span>Because an email isn't attached, password recovery by email is unavailable. Keep your username and password somewhere safe. Do not reuse an important password.</span></div>
       </div>
       <form id="register-form" class="register-form" autocomplete="off">
@@ -110,9 +110,9 @@
         <input id="reg-password" type="password" name="password" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="Enter a secure password">
         <label for="reg-confirm">Confirm password</label>
         <input id="reg-confirm" type="password" name="confirm" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="Repeat your password">
-        <label class="confirm-check"><input type="checkbox" id="reg-terms" required><span>I understand this is a ZuzuCord account and email-free password recovery is not available.</span></label>
+        <label class="confirm-check"><input type="checkbox" id="reg-terms" required><span>I'm at least 13, agree to the community guidelines, and understand email-free password recovery is unavailable.</span></label>
         <button class="button button-light register-submit" type="submit" id="reg-submit">Create my account <span aria-hidden="true">↗</span></button>
-        <p id="reg-result" class="form-result" role="status" aria-live="polite">Already have an account? Sign in through the Windows app.</p>
+        <p id="reg-result" class="form-result" role="status" aria-live="polite">Already have an account? Sign in through the Windows app.</p><p class="form-result">Read our <a href="./privacy.html" style="text-decoration:underline">privacy overview</a> and <a href="./terms.html" style="text-decoration:underline">community guidelines</a>.</p>
       </form>
     </section>
 
@@ -121,6 +121,6 @@
       <div class="faq"><details><summary>Is ZuzuCord a Discord client?</summary><p>No. ZuzuCord V2 is an independent community messaging application. It is not affiliated with Discord Inc.</p></details><details><summary>Where do download counts come from?</summary><p>GitHub's public Releases API. Downloads count published release assets, not all users, installations, or GitHub Actions artifacts.</p></details><details><summary>Does the desktop app need internet?</summary><p>Yes. Its account and messaging features connect to Supabase. The Windows client itself is written in C#.</p></details><details><summary>Can I sign up without an email?</summary><p>Yes. The username registration form creates an account that can be used in the Windows app. No email means no email-based password recovery. Existing ZuzifySocials email/password accounts can also sign in inside the app.</p></details></div>
     </section>
   </main>
-  <footer><div class="container footer-inner"><div class="brand"><span class="brandmark" aria-hidden="true"><span></span><span></span></span>ZuzuCord <span class="version-tag">V2</span></div><p>Independent community software. © 2026 ZuzuCord.</p><a href="https://github.com/taithedev/Zuzucord">View source ↗</a></div></footer>
+  <footer><div class="container footer-inner"><div class="brand"><span class="brandmark" aria-hidden="true"><span></span><span></span></span>ZuzuCord <span class="version-tag">V2</span></div><p>Independent community software. © 2026 ZuzuCord.</p><span class="footer-links"><a href="./privacy.html">Privacy</a> · <a href="./terms.html">Community rules</a> · <a href="https://github.com/taithedev/Zuzucord">Source ↗</a></span></div></footer>
 </body>
 </html>
