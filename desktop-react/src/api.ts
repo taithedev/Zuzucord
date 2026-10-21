@@ -125,6 +125,17 @@ export async function ensureAccount(session: Session): Promise<string> {
   return username;
 }
 export const appApi = {
+  async presenceHeartbeat(): Promise<void> {
+    checked(await client.rpc('zuzucord_presence_heartbeat'));
+  },
+  async onlineFriendIds(friendIds: string[]): Promise<string[]> {
+    if (!friendIds.length) return [];
+    const rows = checked(await client.from('zuzucord_friend_presence')
+      .select('user_id,last_seen_at').in('user_id', friendIds)) || [];
+    const cutoff = Date.now() - 135000;
+    return rows.filter(row => new Date(row.last_seen_at).getTime() >= cutoff)
+      .map(row => row.user_id as string);
+  },
   async getServers(): Promise<Server[]> {
     return checked(await client.from('zuzucord_servers')
       .select('id,name,description,owner_id').order('created_at', { ascending: false })) || [];
