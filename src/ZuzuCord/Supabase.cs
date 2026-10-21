@@ -11,7 +11,8 @@ internal sealed record ChatMessage(
     Guid Id,
     [property: JsonPropertyName("author_id")] Guid AuthorId,
     string Content,
-    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("bot_name")] string? BotName = null);
 internal sealed record FriendRequest(Guid Id,
     [property: JsonPropertyName("from_user")] Guid FromUser,
     [property: JsonPropertyName("to_user")] Guid ToUser, string Status);
