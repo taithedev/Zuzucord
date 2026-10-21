@@ -70,7 +70,7 @@ $("announcement-form").addEventListener("submit",async e=>{
  try{await api("/rest/v1/rpc/zuzucord_publish_announcement",{method:"POST",body:{p_title:$("announcement-title").value,p_content:$("announcement-message").value}});$("announcement-form").reset();state("Official announcement published.")}catch(error){state(error.message,true)}
 });
 $("credit-form").addEventListener("submit",async e=>{
- e.preventDefault();try{const result=await api("/rest/v1/rpc/zuzucord_issue_boost_credits",{method:"POST",body:{p_user:$("credit-user").value,p_amount:Number($("credit-amount").value)}});state("Boost credits issued. New recipient balance: "+result);}catch(error){state(error.message,true)}
+ e.preventDefault();try{const result=await api("/rest/v1/rpc/zuzucord_grant_crystals",{method:"POST",body:{p_user:$("credit-user").value,p_amount:Number($("credit-amount").value)}});state("Crystals granted securely. New recipient Crystal balance: "+result);}catch(error){state(error.message,true)}
 });
 $("badge-form").addEventListener("submit",async e=>{
  e.preventDefault();try{await api("/rest/v1/rpc/zuzucord_set_user_badge",{method:"POST",body:{p_target:$("badge-user").value,p_role:$("badge-role").value,p_enabled:$("badge-enable").value==="true"}});state("User badge updated.")}catch(error){state(error.message,true)}
