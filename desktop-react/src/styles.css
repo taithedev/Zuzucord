@@ -247,3 +247,7 @@ button.activity-server:hover{color:white}
 .sidebar-search input{flex:1;min-width:0;max-width:100%;background:transparent;border:0;outline:none;color:#efe5f7;font-size:11px}
 .sidebar-search input::placeholder{color:#b7acbf}
 .sidebar-search:focus-within{border-color:color-mix(in srgb,var(--accent) 60%,#342342);box-shadow:0 0 0 2px #b48aff16}
+
+/* Supabase friend-presence indicators */
+.presence-dot{width:9px;height:9px;flex:none;border-radius:50%;background:#45c47b;box-shadow:0 0 0 2px #18251e}
+.friend-row-text small{display:flex;align-items:center;gap:5px}
