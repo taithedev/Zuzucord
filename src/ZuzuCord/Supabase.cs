@@ -65,12 +65,27 @@ internal sealed class Supabase : IDisposable
         return new Session(token.GetString()!, refresh, id, email, DateTimeOffset.UtcNow.AddSeconds(expires));
     }
 
+    private const string UsernameAuthSuffix = "@users.zuzucord.invalid";
+    private const string UsernameDisplaySuffix = "@zuzucord.com";
+
+    public static string VisibleIdentity(string email)
+    {
+        return email.EndsWith(UsernameAuthSuffix, StringComparison.OrdinalIgnoreCase)
+            ? email[..^UsernameAuthSuffix.Length] + UsernameDisplaySuffix
+            : email;
+    }
+
     public static string LoginEmail(string usernameOrEmail)
     {
         var input = usernameOrEmail.Trim().ToLowerInvariant();
-        return input.Contains('@') ? input : System.Text.RegularExpressions.Regex.IsMatch(input, "^[a-z0-9_]{3,24}$")
-            ? input + "@users.zuzucord.invalid"
-            : throw new InvalidOperationException("Enter a valid username (3–24 characters) or email.");
+        var username = input.EndsWith(UsernameDisplaySuffix, StringComparison.Ordinal)
+            ? input[..^UsernameDisplaySuffix.Length]
+            : input;
+        if (System.Text.RegularExpressions.Regex.IsMatch(username, "^[a-z0-9_]{3,24}$"))
+            return username + UsernameAuthSuffix;
+        if (input.Contains('@') && !input.EndsWith(UsernameDisplaySuffix, StringComparison.Ordinal))
+            return input; // Existing verified email-account sign-in.
+        throw new InvalidOperationException("Enter your username, username@zuzucord.com, or a valid account email.");
     }
 
     public async Task SignInAsync(string usernameOrEmail, string password)
