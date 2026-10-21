@@ -1,59 +1,67 @@
 # ZuzuCord V2
 
-ZuzuCord V2 is a community messaging application with a native **C# / .NET 8 Windows client**, a standalone download website, and Supabase-backed account authentication and public chat rooms.
+ZuzuCord is an independent social messaging project, with a **native C#/.NET 8 Windows app** and a black-and-white **download website**. It uses the existing Zuzify Supabase project while storing its own feature data under the `zuzucord_` prefix.
 
-**This is ZuzuCord's own social app. It is not a Discord client and is not affiliated with Discord Inc.**
+ZuzuCord **is not Discord**, does not use Discord user tokens, and is not affiliated with Discord Inc.
 
-## Directories
+## Status
 
-| Folder | Purpose |
-| --- | --- |
-| `src/ZuzuCord/` | Native Windows Forms desktop client (.NET 8; opens in Visual Studio 2026) |
-| `website/` | Public downloads landing page and real GitHub project statistics |
-| `.github/workflows/windows-build.yml` | Compiles and publishes Windows x64 ZIP artifact |
-| `.github/workflows/website-check.yml` | Tests the static download website |
-| `.github/workflows/website-pages.yml` | Optional manual GitHub Pages deployment |
+**Beta / preview software.** GitHub Actions builds the .NET application; website CI checks syntax and local assets. Build success does not prove every runtime path works. Voice/video calls, media uploads, full guild moderation, push notifications, and exact ZuzifySocials UI parity are not yet implemented.
 
-## Running the Windows app
+## What is implemented
 
-Install .NET 8 SDK and open `src/ZuzuCord/ZuzuCord.csproj` in Visual Studio with the .NET desktop development workload. Press F5.
+- Native Windows Forms app with dark OLED-style theme, channel list, refresh, local message search, profile editing, sign in/out
+- Supabase email/password sign-in and **username-only accounts** (created through a server-side registration function)
+- Public channels, messaging, a friends list, friend requests, and direct messages between accepted friends
+- Isolated RLS-protected `zuzucord_` tables and aggregate community stats
+- Website with user-provided brand art, 3D-tilt/channel-switching demo, GitHub downloads, and live account/ban/message totals
+- A `beta-website` branch with experimental styling and feedback links
+- Automated Windows x64 compilation, artifact verification and public preview ZIP release
 
-Or use PowerShell:
+## Windows application
+
+Open `src/ZuzuCord/ZuzuCord.csproj` in Visual Studio 2026 with the **.NET desktop development** workload. Requires .NET 8 SDK.
 
 ```powershell
 dotnet run --project src/ZuzuCord/ZuzuCord.csproj
 ```
 
-Build a portable self-contained Windows package:
+To make a portable self-contained build:
 
 ```powershell
 dotnet publish src/ZuzuCord/ZuzuCord.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o dist/windows
 ```
 
-Use the **Actions > ZuzuCord V2 Windows Build** workflow to obtain a build artifact once CI passes. Artifacts are not public releases; creating a release with a signed installer is a separate distribution step.
+After a successful push-triggered Windows build, the workflow publishes an **unsigned preview release ZIP** to GitHub Releases. Extract it and run `ZuzuCord.exe`. Windows SmartScreen may prompt for an unsigned application; verify the release and publisher yourself before running.
 
-## What works in this native version
+## Website and registration
 
-- Startup notice that requires consent on every launch
-- Email/password sign-in and registration via Supabase Auth
-- Public rooms (`general`, `introductions`, `development`)
-- Read recent messages and send messages in authorized rooms
-- Automatic message refresh every 15 seconds
-- Access-token refresh, request errors and a dark Windows UI
-- Secrets are not written to local files; only a **public Supabase publishable key** is shipped in the source
+`website/index.html` is the stable source. `beta-website` has a separate beta-only presentation. Its username-only signup form calls the Supabase Edge Function `zuzucord-register`, which creates a confirmed Supabase Auth account using an internal non-deliverable login identifier. Registration is rate limited, stores no plaintext passwords in custom tables, and only creates accounts—not signed-in web sessions.
 
-All newly created database tables start with `zuzucord_`. The existing `zuzify_` data has not been renamed or deleted.
+The Windows client accepts either an existing email address or a ZuzuCord username as the login identifier. Username-only accounts **cannot recover their passwords through email**; this is an important limitation. Do not lose the password.
 
-**Limitations:** This is not yet a pixel-perfect copy of the older ZuzifySocials web interface. The Windows client has basic text chat and authentication; it does not yet include calls, file uploads, moderation dashboard, or complete ZuzifySocials feature parity. Visual Studio/CI compilation does not prove that all runtime flows are error-free.
+The website's statistics come from the public, aggregate-only Supabase RPC `zuzucord_public_stats`:
+- `total_users` — rows in `zuzucord_accounts` only
+- `created_today` — new ZuzuCord accounts since midnight UTC
+- `banned_users` — currently active ZuzuCord ban records
+- `total_messages` — messages stored in public chat rooms
 
-The separate [ZuzifySocials repository](https://github.com/taithedev/ZuzifySocials) contains an earlier Windows build that bundles the full website UI; keep it for the UI reference and migration work.
+Shared Zuzify Auth accounts are included only after joining ZuzuCord. Nothing from other apps' account tables is included.
 
-## Download website
+The 3D preview is an **illustrative local demo**; its messages and channel switching are not live conversations. Public GitHub release download totals count downloadable release assets, not unique installations.
 
-The `website/` directory is a self-contained static website and can be deployed on Vercel or GitHub Pages. It displays actual GitHub API statistics: stars, release downloads, published releases and latest Windows build status. Its primary download button links to a Windows release asset only when an actual asset is published.
+## Project layout
 
-If no release exists, it links to GitHub Actions instead and clearly labels the build as a development artifact.
+- `src/ZuzuCord/` — native Windows application source
+- `website/` — static download, statistics, signup website
+- `website/assets/` — web-optimized versions of the supplied ZuzuCord icon and banner
+- `.github/workflows/windows-build.yml` — Windows build and preview release
+- `.github/workflows/website-check.yml` — validates stable and beta website branches
+- `.github/workflows/website-pages.yml` — optional manual Pages publish
+- `BRANCHING.md` — release/beta workflow and naming
 
-## Security / policy
+See `website/privacy.html`, `website/terms.html`, and SECURITY.md for safety and limitations.
 
-Do not commit private credentials, service-role keys, or personal Discord account tokens. A public Supabase publishable key is designed for distribution. Access to chat and user records is enforced by Supabase row-level security. Users are responsible for following the service's rules. See [SECURITY.md](SECURITY.md).
+## Deployment
+
+GitHub source changes do **not** automatically make the download site public. GitHub Pages requires an enabled Pages setup and a successful publish workflow; Vercel requires project creation and repository permissions. No live website URL is claimed until confirmed by the host.
