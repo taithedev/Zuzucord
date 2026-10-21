@@ -69,8 +69,29 @@ $("announcement-form").addEventListener("submit",async e=>{
  e.preventDefault();if(!confirm("Publish this official read-only announcement to all ZuzuCord accounts?"))return;
  try{await api("/rest/v1/rpc/zuzucord_publish_announcement",{method:"POST",body:{p_title:$("announcement-title").value,p_content:$("announcement-message").value}});$("announcement-form").reset();state("Official announcement published.")}catch(error){state(error.message,true)}
 });
+async function resolveCrystalRecipient(identity){
+ const name=identity.trim().toLowerCase().replace(/@zuzucord\\.com$/,'');
+ if(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(name))return name;
+ if(!/^[a-z0-9_]{3,24}$/.test(name))throw Error("Enter a valid ZuzuCord username or account UUID.");
+ const match=await api("/rest/v1/rpc/zuzucord_find_username",{
+   method:"POST",body:{p_username:name}
+ });
+ if(!Array.isArray(match)||!match[0]?.user_id)throw Error("No ZuzuCord user matches that name.");
+ return match[0].user_id;
+}
 $("credit-form").addEventListener("submit",async e=>{
- e.preventDefault();try{const result=await api("/rest/v1/rpc/zuzucord_grant_crystals",{method:"POST",body:{p_user:$("credit-user").value,p_amount:Number($("credit-amount").value)}});state("Crystals granted securely. New recipient Crystal balance: "+result);}catch(error){state(error.message,true)}
+ e.preventDefault();if(busy)return;busy=true;
+ try{
+  const target=await resolveCrystalRecipient($("credit-user").value);
+  const amount=Number($("credit-amount").value);
+  if(!Number.isInteger(amount)||amount<1||amount>1000)throw Error("Grant between 1 and 1,000 Crystals.");
+  if(!confirm("Grant "+amount+" non-purchasable Crystals to this user?"))return;
+  const result=await api("/rest/v1/rpc/zuzucord_grant_crystals",{
+    method:"POST",body:{p_user:target,p_amount:amount}
+  });
+  state("Crystals granted and recorded in recipient history. Balance: "+result);
+ }catch(error){state(error.message,true)}
+ finally{busy=false}
 });
 $("badge-form").addEventListener("submit",async e=>{
  e.preventDefault();try{await api("/rest/v1/rpc/zuzucord_set_user_badge",{method:"POST",body:{p_target:$("badge-user").value,p_role:$("badge-role").value,p_enabled:$("badge-enable").value==="true"}});state("User badge updated.")}catch(error){state(error.message,true)}
