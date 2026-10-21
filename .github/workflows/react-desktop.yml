@@ -25,6 +25,15 @@ jobs:
         working-directory: desktop-react
         shell: pwsh
         run: npm install --no-audit --no-fund
+      - name: Test v-prefixed release policy
+        working-directory: desktop-react
+        run: node --test electron/versions.test.cjs
+      - name: Embed installed release identity
+        working-directory: desktop-react
+        shell: pwsh
+        run: |
+          $tag = "v0.8.0-react.${{ github.run_number }}"
+          Set-Content -Path electron/release.json -Value ('{"tag":"' + $tag + '"}') -NoNewline
       - name: Typecheck, bundle and package React Windows client
         working-directory: desktop-react
         shell: pwsh
@@ -56,5 +65,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.7.0-react.${{ github.run_number }}"
-          gh release create $tag desktop-react/release/*.exe desktop-react/release/*.zip --target main --prerelease --title "ZuzuCord React Desktop Preview #${{ github.run_number }}" --notes "Windows-native packaged React/TypeScript client with OLED/gradient personalization, three-rail community UI and existing Supabase accounts, servers, friends, DMs and ZuzuBot. Unsigned preview build: verify Windows runtime compatibility before broad release. The legacy C# application remains in src/ZuzuCord."
+          $tag = "v0.8.0-react.${{ github.run_number }}"
+          gh release create $tag desktop-react/release/*.exe desktop-react/release/*.zip --target main --prerelease --title "ZuzuCord React Desktop Preview #${{ github.run_number }}" --notes "React Windows client with official read-only announcements, production website sync, community boosts, trusted bot installations and v-tag-only auto release checks. Installer is unsigned: download must be reviewed and launched manually. Legacy C# client remains."
