@@ -63,3 +63,15 @@ body{background:#000}
 .server-tool-row button:hover{background:#fff}
 .beta-server-tools #server-share{justify-self:start;text-align:left;font-size:12px;padding:9px 0}
 @media(max-width:440px){.server-tool-row{grid-template-columns:minmax(0,1fr) 70px}}
+
+/* React desktop appearance synchronization */
+.beta-effects{display:grid;gap:12px;padding:14px;margin-top:8px;border:1px solid #303038;background:#0d0c11;border-radius:12px}
+.beta-effects .color-picker-row{gap:8px}
+.beta-effects .color-picker-row label{margin:0;font-weight:500;font-size:11px}
+.beta-effects .color-picker-row input[type=color]{width:38px;flex:none;height:32px;border-radius:6px}
+.beta-effects input[type=range]{accent-color:#aa80fb;max-width:100%;width:100%}
+.beta-effects input[type=checkbox]{accent-color:#a978ff}
+.beta-preview.motion-active{transition:background .3s ease,border-color .3s ease}
+#theme-preview{border-color:color-mix(in srgb,var(--demo-accent) 28%,#32323a)}
+#theme-preview .preview-tag{background:var(--demo-accent)}
+@media(prefers-reduced-motion:reduce){.beta-preview.motion-active{transition:none}}
