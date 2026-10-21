@@ -1,6 +1,6 @@
 # ZuzuCord V2
 
-ZuzuCord is an independent social messaging project, with a **native C#/.NET 8 Windows app** and a black-and-white **download website**. It uses the existing Zuzify Supabase project while storing its own feature data under the `zuzucord_` prefix.
+ZuzuCord is an independent social messaging project, with a **native C#/.NET 8 Windows app using Siticone NetCore UI** and a black-and-white **download website**. It uses the existing Zuzify Supabase project while storing its own feature data under the `zuzucord_` prefix.
 
 ZuzuCord **is not Discord**, does not use Discord user tokens, and is not affiliated with Discord Inc.
 
@@ -17,6 +17,16 @@ ZuzuCord **is not Discord**, does not use Discord user tokens, and is not affili
 - Website with user-provided brand art, 3D-tilt/channel-switching demo, GitHub downloads, and live account/ban/message totals
 - A `beta-website` branch with experimental styling and feedback links
 - Automated Windows x64 compilation, artifact verification and public preview ZIP release
+
+## ZuzuCord ID and authentication
+
+The account table stores a generated `login_alias` such as `someone@zuzucord.com`. Users can enter that alias, their bare username, or a pre-existing account email in the Windows app.
+
+**Important:** This is a login alias, not a working email inbox. Supabase Auth continues to use a reserved `@users.zuzucord.invalid` identifier for username-only accounts. This avoids inventing verified addresses at a potentially unconfigured domain and keeps existing accounts working. Deliverable email addresses require verified domain ownership, email provider configuration, and safe account migration. Email-based password recovery is not available for username-only users.
+
+## Siticone UI
+
+The application references `Siticone.NetCore.UI` version 2026.9.9. The new `SiticoneShell` builds native Siticone navigation controls and an OLED accent panel, and falls back gracefully to WinForms controls if the runtime cannot load a component. Existing login, friends, messages and profile forms use the shared OLED styles. For third-party package terms and updates, see [Siticone](https://www.siticoneframework.com/) and NuGet.
 
 ## Windows application
 
