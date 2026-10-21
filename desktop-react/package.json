@@ -1,0 +1,59 @@
+{
+  "name": "zuzucord-desktop",
+  "productName": "ZuzuCord",
+  "version": "0.7.0",
+  "description": "ZuzuCord React desktop client for Windows",
+  "private": true,
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "start": "npm run build:ui && electron .",
+    "build:ui": "tsc --noEmit && vite build",
+    "build:win": "npm run build:ui && electron-builder --win nsis zip --publish never",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.76.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.6",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "electron": "^38.2.2",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.11"
+  },
+  "build": {
+    "appId": "com.zuzify.zuzucord.react",
+    "productName": "ZuzuCord",
+    "artifactName": "ZuzuCord-React-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "icon": "assets/zuzucord.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
