@@ -81,7 +81,15 @@
       midnight: ["#080d1d", "#161c30", "#222943"]
     };
     const card = $("theme-preview");
-    card.style.setProperty("--demo-background", colors[theme][0]);
+    const gradientOn = $("gradient-toggle").checked === true;
+    const start = validAccent($("gradient-start").value);
+    const end = validAccent($("gradient-end").value);
+    card.style.setProperty("--demo-background", gradientOn
+      ? "radial-gradient(ellipse at 15% 30%, " + start + ", transparent 78%), linear-gradient(140deg, " + end + ", #050509)"
+      : colors[theme][0]);
+    card.style.setProperty("--demo-glow", String(Math.max(0,Math.min(100,Number($("glass-strength").value)||0))/100));
+    card.classList.toggle("motion-active", $("motion-toggle").checked === true);
+    $("glass-value").textContent = String(Math.max(0,Math.min(100,Number($("glass-strength").value)||0))) + "%";
     card.style.setProperty("--demo-panel", colors[theme][1]);
     card.style.setProperty("--demo-input", colors[theme][2]);
     card.style.setProperty("--demo-accent", accent);
@@ -116,12 +124,17 @@
   async function loadTheme() {
     await refreshServers();
     const selector = $("active-server");
-    const data = await request("/rest/v1/zuzucord_beta_sync?select=theme,accent,sync_enabled,last_server_id&user_id=eq." +
+    const data = await request("/rest/v1/zuzucord_beta_sync?select=theme,accent,sync_enabled,last_server_id,gradient_enabled,gradient_start,gradient_end,glass_strength,motion_enabled&user_id=eq." +
       encodeURIComponent(accountId), { authorized: true });
     const record = Array.isArray(data) ? data[0] : null;
     $("theme-choice").value = validTheme(record?.theme);
     $("accent-choice").value = validAccent(record?.accent);
     $("sync-toggle").checked = record?.sync_enabled === true;
+    $("gradient-toggle").checked = record?.gradient_enabled === true;
+    $("gradient-start").value = validAccent(record?.gradient_start || "#25083f");
+    $("gradient-end").value = validAccent(record?.gradient_end || "#09050f");
+    $("glass-strength").value = String(Math.max(0,Math.min(100,Number(record?.glass_strength ?? 64))));
+    $("motion-toggle").checked = record?.motion_enabled !== false;
     selector.value = record?.last_server_id || "";
     if (selector.selectedIndex < 0) selector.value = "";
     setPreview();
@@ -218,6 +231,11 @@
           theme: validTheme($("theme-choice").value),
           accent: validAccent($("accent-choice").value),
           sync_enabled: $("sync-toggle").checked,
+          gradient_enabled: $("gradient-toggle").checked,
+          gradient_start: validAccent($("gradient-start").value),
+          gradient_end: validAccent($("gradient-end").value),
+          glass_strength: Math.max(0,Math.min(100,Number($("glass-strength").value)||0)),
+          motion_enabled: $("motion-toggle").checked,
           last_server_id: $("active-server").value || null,
           updated_at: new Date().toISOString()
         }
@@ -242,9 +260,17 @@
     $("accent-choice").addEventListener("input", setPreview);
     $("reset-choice").addEventListener("click", () => {
       $("theme-choice").value = "oled";
-      $("accent-choice").value = "#c9c9d2";
+      $("accent-choice").value = "#a978ff";
+      $("gradient-toggle").checked = true;
+      $("gradient-start").value = "#25083f";
+      $("gradient-end").value = "#09050f";
+      $("glass-strength").value = "64";
+      $("motion-toggle").checked = true;
       setPreview();
     });
+    for (const id of ["gradient-toggle", "gradient-start", "gradient-end", "glass-strength", "motion-toggle"]) {
+      $(id).addEventListener(id === "gradient-toggle" || id === "motion-toggle" ? "change" : "input", setPreview);
+    }
     setPreview();
   });
 })();
