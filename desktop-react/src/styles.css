@@ -288,3 +288,45 @@ button.activity-server:hover{color:white}
 .installed-mark{color:#9cdfa3;font-size:11px}
 @media(max-width:1050px){.update-banner{width:min(650px,calc(100vw - 24px))}.update-banner small{display:none}}
 @media(prefers-reduced-motion:reduce){.update-banner{transition:none}}
+
+/* Discord-inspired role editor + protected Owner UI */
+.roles-editor{display:grid;grid-template-columns:230px 1fr;min-height:445px}
+.role-list{background:#110b18;padding:18px 13px;border-right:1px solid #ffffff15;max-height:65vh;overflow-y:auto}
+.roles-title{display:flex;align-items:center;gap:8px;color:#c4b5d6;font-size:12px;font-weight:800;letter-spacing:.2px;margin-bottom:18px}
+.roles-title span{margin-left:auto;color:#91829e;font-size:10px}
+.role-choice{width:100%;border:1px solid transparent;border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px;background:none;color:#cabbd5;text-align:left;margin:4px 0;font-size:12px}
+.role-choice:hover{background:#ffffff0b}
+.role-choice.chosen{background:#39234c;border-color:#674987;color:#fff}
+.role-pip{height:12px;width:12px;border-radius:50%;flex:none}
+.role-help{font-size:10px;color:#9a8bab;line-height:1.7;padding:14px 6px}
+.role-main{padding:20px;max-height:65vh;overflow-y:auto}
+.role-main h3{font-size:17px;margin-bottom:15px}
+.role-form{display:grid;gap:12px}
+.role-form>label{display:flex;align-items:center;justify-content:space-between;gap:15px;font-size:12px;font-weight:700}
+.role-form>label input:not([type="color"]){flex:1;max-width:240px;background:#1e1427;border:1px solid #4b315e;border-radius:8px;color:#fff;padding:10px}
+.role-form>label input[type=color]{width:70px;height:37px;background:transparent;border:0}
+.roles-perms{display:grid;gap:7px;margin-top:5px}
+.roles-perms h4,.role-members h4{font-size:12px;color:#b6a6c7;margin:6px 0 10px}
+.role-permission{display:flex;align-items:center;justify-content:space-between;gap:15px;background:#ffffff09;border:1px solid #ffffff10;border-radius:8px;padding:11px;cursor:pointer}
+.role-permission>div{display:grid;gap:4px}
+.role-permission strong{font-size:12px}
+.role-permission small{font-size:10px;color:#a393b2}
+.role-permission input,.role-member input{accent-color:var(--accent);height:18px;width:18px;flex:none}
+.role-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.role-members{border-top:1px solid #ffffff19;margin-top:22px;padding-top:15px}
+.role-members h4{display:flex;gap:8px;align-items:center}
+.role-member{display:flex;justify-content:space-between;align-items:center;padding:10px 5px;border-bottom:1px solid #ffffff0c}
+.role-member span{display:grid;gap:4px}
+.role-member strong{font-size:12px}
+.role-member small{font-size:10px;text-transform:capitalize;color:#9d92a9}
+.owner-banner{display:flex;gap:13px;align-items:center;padding:17px;border-radius:12px;border:1px solid #7b559b;background:linear-gradient(115deg,#352143,#170f20)}
+.owner-banner svg{color:#e8c07c}
+.owner-banner div{display:grid;gap:3px}
+.owner-banner strong{font-size:16px}
+.owner-banner small{font-size:11px;color:#d1bddf}
+.owner-role-form{display:grid;gap:12px}
+.owner-role-form label{display:grid;gap:7px;font-size:11px;font-weight:700;color:#b6a9c6}
+.owner-role-form input,.owner-role-form select{background:#1b1225;padding:10px;color:white;border:1px solid #544269;border-radius:9px;width:100%}
+.owner-role-form button{margin-top:8px}
+.owner-nav{background:#dfb8660d;color:#f1d5a7}
+@media(max-width:800px){.roles-editor{grid-template-columns:170px 1fr}.role-list{padding:12px 7px}.role-main{padding:12px}}
