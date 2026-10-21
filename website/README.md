@@ -22,3 +22,7 @@ Deploy the `website/` folder to a static host (Vercel root directory `website`, 
 ### Beta testers
 
 Branch `beta-website` has an experimental UI and bug-report links. Keep its deployment separate from main to avoid overwriting the stable site.
+
+## Public login alias
+
+ZuzuCord sign-in IDs are shown as `username@zuzucord.com`. These are **aliases, not actual mailboxes**. The Supabase database generates the alias from each unique username; the Auth service retains its internal reserved identifier so earlier accounts are not invalidated. Password recovery by email is not available for this flow.
