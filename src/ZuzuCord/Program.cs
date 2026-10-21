@@ -63,7 +63,7 @@ internal sealed class ChatWindow : Form
     private readonly ListBox servers = new() {
         Dock = DockStyle.Fill, BackColor = Ui.Background, ForeColor = Color.White,
         BorderStyle = BorderStyle.None, Font = new Font("Segoe UI Semibold", 10),
-        IntegralHeight = false
+        IntegralHeight = false, DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 49
     };
     private readonly List<ZuzuServer> serverItems = [];
     private readonly List<ServerChannel> channelItems = [];
@@ -105,12 +105,12 @@ internal sealed class ChatWindow : Form
 
         var header = new TableLayoutPanel { Dock = DockStyle.Top, Height = 66, ColumnCount = 6,
             BackColor = Ui.Panel, Padding = new Padding(17, 10, 17, 8) };
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 175));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
         header.Controls.Add(new Label { Text = "ZuzuCord  /  V2", Dock = DockStyle.Fill,
             Font = new Font("Segoe UI Semibold", 16), ForeColor = Color.White, TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
         header.Controls.Add(status, 1, 0);
@@ -134,10 +134,10 @@ internal sealed class ChatWindow : Form
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 245));
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        var serverRail = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, BackColor = Ui.Background };
+        var serverRail = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, BackColor = Ui.Background, Padding = new Padding(5, 0, 5, 0) };
         serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
         serverRail.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 145));
+        serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 188));
         serverRail.Controls.Add(new Label {
             Text = "  SERVERS", Dock = DockStyle.Fill, ForeColor = ThemeColors.Muted,
             Font = new Font("Segoe UI Semibold", 11), TextAlign = ContentAlignment.MiddleLeft
@@ -147,14 +147,17 @@ internal sealed class ChatWindow : Form
         var createServer = Ui.Button("+ Server", 140);
         var joinServer = Ui.Button("Join invite", 140);
         var membersButton = Ui.Button("Members", 140);
+        var botButton = Ui.Button("ZuzuBot", 140);
         serverActions.Controls.Add(createServer);
         serverActions.Controls.Add(joinServer);
         serverActions.Controls.Add(membersButton);
+        serverActions.Controls.Add(botButton);
         serverRail.Controls.Add(serverActions, 0, 2);
         shell.Controls.Add(serverRail, 0, 0);
         createServer.Click += async (_, _) => await CreateServer();
         joinServer.Click += async (_, _) => await JoinServer();
         membersButton.Click += async (_, _) => await ShowMembers();
+        botButton.Click += (_, _) => ShowBotSettings();
         var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, BackColor = Ui.Side };
         sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -216,6 +219,24 @@ internal sealed class ChatWindow : Form
             TextRenderer.DrawText(e.Graphics, rooms.Items[e.Index]?.ToString() ?? "", rooms.Font,
                 bounds, active ? Color.White : ThemeColors.Muted,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+        };
+        servers.DrawItem += (_, e) =>
+        {
+            if (e.Index < 0 || e.Index >= servers.Items.Count) return;
+            bool active = (e.State & DrawItemState.Selected) != 0;
+            using var background = new SolidBrush(active ? ThemeColors.Panel : ThemeColors.Background);
+            e.Graphics.FillRectangle(background, e.Bounds);
+            if (active)
+            {
+                using var accentBrush = new SolidBrush(ThemeColors.Accent);
+                e.Graphics.FillRectangle(accentBrush, e.Bounds.X + 3, e.Bounds.Y + 7, 3, e.Bounds.Height - 14);
+            }
+            var name = servers.Items[e.Index]?.ToString() ?? string.Empty;
+            var contentRect = new Rectangle(e.Bounds.Left + 11, e.Bounds.Top,
+                Math.Max(1, e.Bounds.Width - 16), e.Bounds.Height);
+            TextRenderer.DrawText(e.Graphics, name, servers.Font, contentRect,
+                active ? Color.White : ThemeColors.Muted,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
         };
         servers.SelectedIndexChanged += async (_, _) =>
         {
@@ -341,6 +362,7 @@ internal sealed class ChatWindow : Form
         var index = servers.SelectedIndex - 1;
         selectedServer = index < 0 || index >= serverItems.Count ? null : serverItems[index].Id;
         createChannel.Enabled = false;
+        compose.PlaceholderText = selectedServer.HasValue ? "Message channel or type /help for ZuzuBot…" : "Message public channel…";
         invite.Enabled = index >= 0 && index < serverItems.Count
             && serverItems[index].OwnerId == api.Current?.UserId;
         if (selectedServer is Guid serverId)
@@ -414,6 +436,18 @@ internal sealed class ChatWindow : Form
         using var dialog = new ServerMembersForm(api, serverItems[index]);
         dialog.ShowDialog(this);
         await LoadServers();
+    }
+
+    private void ShowBotSettings()
+    {
+        var index = servers.SelectedIndex - 1;
+        if (index < 0 || index >= serverItems.Count)
+        {
+            status.Text = "Select a server to configure ZuzuBot.";
+            return;
+        }
+        using var dialog = new ServerBotForm(api, serverItems[index]);
+        dialog.ShowDialog(this);
     }
 
     private async Task CreateServer()
@@ -498,7 +532,8 @@ internal sealed class ChatWindow : Form
         var sb = new StringBuilder();
         foreach (var entry in cachedMessages)
         {
-            var author = entry.AuthorId == api.Current?.UserId ? "You" : $"Member {entry.AuthorId.ToString("N")[..7]}";
+            var author = entry.BotName is not null ? entry.BotName + "  [BOT]" :
+                entry.AuthorId == api.Current?.UserId ? "You" : $"Member {entry.AuthorId.ToString("N")[..7]}";
             if (needle.Length > 0 && !entry.Content.Contains(needle, StringComparison.OrdinalIgnoreCase) &&
                 !author.Contains(needle, StringComparison.OrdinalIgnoreCase)) continue;
             sb.AppendLine($"[{entry.CreatedAt.ToLocalTime():MMM d, HH:mm}] {author}");
@@ -521,7 +556,7 @@ internal sealed class ChatWindow : Form
                 !author.Contains(needle, StringComparison.OrdinalIgnoreCase)) continue;
             transcript.SelectionStart = transcript.TextLength;
             transcript.SelectionFont = emphasis;
-            transcript.SelectionColor = ThemeColors.Accent;
+            transcript.SelectionColor = entry.BotName is null ? ThemeColors.Accent : Color.FromArgb(234, 234, 244);
             transcript.AppendText(author);
             transcript.SelectionFont = transcript.Font;
             transcript.SelectionColor = ThemeColors.Muted;
@@ -541,8 +576,12 @@ internal sealed class ChatWindow : Form
         sending = true; send.Enabled = false;
         try
         {
-            if (selectedServer.HasValue) await api.SendServerMessageAsync(room, content);
-            else await api.SendAsync(room, content);
+            if (selectedServer.HasValue && content.StartsWith("/", StringComparison.Ordinal))
+                await api.RunBotCommandAsync(room, content);
+            else if (selectedServer.HasValue)
+                await api.SendServerMessageAsync(room, content);
+            else
+                await api.SendAsync(room, content);
             compose.Clear();
             await Refresh();
         }
