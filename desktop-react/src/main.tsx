@@ -17,6 +17,7 @@ import {
 } from './api';
 import { ServerRolesEditor } from './ServerRolesEditor';
 import { OwnerConsole } from './OwnerConsole';
+import { CrystalCenter } from './CrystalCenter';
 import './styles.css';
 
 type View = 'friends' | 'channel' | 'dm';
@@ -142,7 +143,8 @@ function App() {
   const [rightPanel, setRightPanel] = useState(true);
   const [beta, setBeta] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
-  const [walletCredits, setWalletCredits] = useState(0);
+  const [walletCrystals, setWalletCrystals] = useState(0);
+  const [legacyCredits, setLegacyCredits] = useState(0);
   const [boostLevel, setBoostLevel] = useState(0);
   const [announcements, setAnnouncements] = useState<{id:string;title:string;content:string;created_at:string}[]>([]);
   const [botApps, setBotApps] = useState<{id:string;name:string;description:string}[]>([]);
@@ -263,7 +265,10 @@ function App() {
     ]).then(async results => {
       if (results[0].status === 'fulfilled') setUserRoles(results[0].value);
       if (results[1].status === 'fulfilled') setBeta(results[1].value);
-      if (results[2].status === 'fulfilled') setWalletCredits(results[2].value);
+      if (results[2].status === 'fulfilled') {
+        setWalletCrystals(results[2].value.crystals);
+        setLegacyCredits(results[2].value.legacyCredits);
+      }
       if (results[3].status === 'fulfilled') setAnnouncements(results[3].value);
       if (!appearance.sync_enabled) return;
       const remote = await appApi.getBeta(me);
@@ -421,11 +426,13 @@ function App() {
   }, [selectedServer]);
   const boostSelectedServer = async () => {
     if (!selectedServer || !me) return;
-    if (!window.confirm('Spend one ServerBoostCredit to permanently upgrade this server?')) return;
+    if (!window.confirm('Spend 100 Crystals to permanently upgrade this server? This action cannot be reversed.')) return;
     try {
       const level = await appApi.boostServer(selectedServer);
       setBoostLevel(level);
-      setWalletCredits(await appApi.wallet(me));
+      const wallet = await appApi.wallet(me);
+      setWalletCrystals(wallet.crystals);
+      setLegacyCredits(wallet.legacyCredits);
       setStatus('Server boosted to level ' + level + '. Channel capacity is now ' + (30+10*level) + '.');
     } catch(error) { showError(error); }
   };
@@ -734,9 +741,9 @@ function App() {
               {isOwner && <button className="plain-activity-link" onClick={() => openModal('install-bot')}>Manage community bots <ChevronRight size={14}/></button>}
             </div>}
             {selectedServer && <div className="activity-box">
-              <h3><Sparkles size={17}/> Server boosts <span>Level {boostLevel}/3</span></h3>
-              <p className="tiny muted">Channel capacity: {30+10*boostLevel}. Your credits: {walletCredits}.</p>
-              <button className="plain-activity-link" onClick={() => openModal('boost')}>Server boost benefits <ChevronRight size={14}/></button>
+              <h3><Gem size={17}/> Crystals <span>Level {boostLevel}/3</span></h3>
+              <p className="tiny muted">Balance: {(walletCrystals + legacyCredits*100).toLocaleString()} Crystals · {30+10*boostLevel} channels</p>
+              <button className="plain-activity-link" onClick={() => openModal('boost')}>Crystals & server perks <ChevronRight size={14}/></button>
             </div>}
           </> : <div className="activity-box"><h3><MessageCircle size={17}/> Conversation</h3>
             <div className="activity-profile"><Avatar name={currentFriend?.username || 'Friend'} size="large"/><h3>{currentFriend?.username || 'Friend'}</h3><small>Accepted ZuzuCord friend</small></div>
@@ -756,7 +763,7 @@ function App() {
         settings:'Appearance & effects', 'new-server':'Create a server','join-server':'Join a server',
         'new-channel':'New text channel','add-friend':'Add a friend',members:'Server members',
         invite:'Invite people',profile:'Your profile',bot:'ZuzuBot settings',
-        announcements:'ZuzuCord Official',boost:'ServerBoostCredits', 'install-bot':'Server bot applications',
+        announcements:'ZuzuCord Official',boost:'Crystals & Server Perks', 'install-bot':'Server bot applications',
         roles:'Server roles & permissions','owner-tools':'ZuzuCord Owner tools'
       }[modal]} subtitle={modal === 'settings' ? 'Make ZuzuCord yours — colors, glass, gradients and motion.' : undefined}
         onClose={() => setModal(null)} wide={modal === 'settings' || modal === 'roles'}>
@@ -780,15 +787,10 @@ function App() {
             announcements.map(item=><article key={item.id} className="announcement-item">
               <strong>{item.title}</strong><time>{dateTime(item.created_at)}</time><p>{item.content}</p></article>)}
         </div>
-        : modal === 'boost' ? <div className="modal-body">
-          <div className="credit-summary"><Sparkles size={25}/><div><strong>ServerBoostCredits: {walletCredits}</strong>
-            <small>Developer-issued promotional credits · not purchasable</small></div></div>
-          <p className="muted">Server boosts: {boostLevel}/3. Each level adds 10 text channels, from 30 to a maximum of 60.</p>
-          <button type="button" disabled={boostLevel>=3||walletCredits<1} className="button button-primary" onClick={()=>void boostSelectedServer()}>
-            <Sparkles size={17}/> Spend 1 credit to boost server
-          </button>
-          <p className="tiny muted">Credits are allocated by ZuzuCord developers through the secure developer portal.</p>
-        </div>
+        : modal === 'boost' ? <CrystalCenter userId={me} serverId={selectedServer}
+          serverName={currentServer?.name || ''} isOwner={isOwner}
+          level={boostLevel} crystals={walletCrystals} legacyCredits={legacyCredits}
+          onBoost={boostSelectedServer} onMessage={setStatus} />
         : modal === 'install-bot' ? <div className="modal-body">
           <p className="muted">Install developer-created ZuzuCord bots in your server. A bot can only post after its server owner approves installation.</p>
           {botApps.length===0?<p className="muted">No bot applications are available.</p>:
