@@ -34,11 +34,11 @@
   <main id="main">
     <section class="hero container" id="home" aria-labelledby="hero-title">
       <div class="hero-copy"><img src="./assets/zuzucord-banner.webp" class="hero-banner" width="640" height="320" alt="ZuzuCord brand banner in white and grey on black">
-        <div class="eyebrow"><span class="status-dot"></span> ZUZUCORD / COMMUNITY / VERSION 2</div>
+        <div class="eyebrow"><span class="status-dot"></span> ZUZUCORD / WINDOWS / VERSION 0.9</div>
         <h1 id="hero-title">Your space.<br><span>Your conversations.</span></h1>
         <p class="hero-lead">A dedicated Windows community client with channels, messaging, and one connected account. Made for the communities you build.</p>
         <div class="hero-actions">
-          <a id="main-download" class="button button-light" href="https://github.com/taithedev/Zuzucord/actions/workflows/windows-build.yml"><span aria-hidden="true">▣</span> View Windows builds <span aria-hidden="true">↗</span></a>
+          <a id="main-download" class="button button-light" href="https://github.com/taithedev/Zuzucord/actions/workflows/react-desktop.yml"><span aria-hidden="true">▣</span> View Windows builds <span aria-hidden="true">↗</span></a>
           <a class="button button-outline" href="./sync.html">Sync website ↔ app <span aria-hidden="true">↗</span></a>
         </div>
         <p class="small-note" id="download-availability" role="status">Official GitHub release downloads appear here when published.</p>
@@ -47,7 +47,7 @@
 
       <div class="preview-wrap" id="interactive-preview" tabindex="0" aria-label="Interactive desktop preview; move the mouse to tilt and select a sample channel" title="Move your mouse to inspect the preview">
         <div class="preview-window" aria-label="Illustrative preview of the ZuzuCord desktop layout">
-          <div class="window-top"><img class="window-app-icon" src="./assets/zuzucord-icon.webp" alt=""><div class="window-symbol" hidden><span></span><span></span></div><strong>ZuzuCord</strong><span class="window-version">V2 · Desktop</span><span class="window-buttons" aria-hidden="true">─ &nbsp; □ &nbsp; ×</span></div>
+          <div class="window-top"><img class="window-app-icon" src="./assets/zuzucord-icon.webp" alt=""><div class="window-symbol" hidden><span></span><span></span></div><strong>ZuzuCord</strong><span class="window-version">React · Desktop</span><span class="window-buttons" aria-hidden="true">─ &nbsp; □ &nbsp; ×</span></div>
           <div class="preview-body">
             <aside class="preview-rail" aria-hidden="true"><span class="rail-active">Z</span><span>+</span><span>⌕</span><span class="rail-bottom">⚙</span></aside>
             <aside class="preview-channels"><div class="small-title">YOUR COMMUNITY <span>⌄</span></div><p class="channel-group">TEXT CHANNELS</p><button type="button" class="channel active" data-demo-channel="general"># &nbsp;general</button><button type="button" class="channel" data-demo-channel="introductions"># &nbsp;introductions</button><button type="button" class="channel" data-demo-channel="development"># &nbsp;development</button><p class="channel-group">YOUR ACCOUNT</p><div class="channel"><span class="avatar-mini"></span> You</div></aside>
@@ -90,10 +90,13 @@
       <div class="feature-grid">
         <article class="feature"><span class="feature-icon" aria-hidden="true">#</span><h3>Create your own servers</h3><p>Build communities with private member-only text channels, invitations and server roles.</p></article>
         <article class="feature"><span class="feature-icon" aria-hidden="true">↗</span><h3>Connected messaging</h3><p>Send messages in joined servers and public channels using shared Supabase accounts.</p></article>
-        <article class="feature"><span class="feature-icon" aria-hidden="true">⌘</span><h3>Native Windows application</h3><p>A standalone C# desktop application, not an embedded Discord website.</p></article>
+        <article class="feature"><span class="feature-icon" aria-hidden="true">⌘</span><h3>Windows desktop application</h3><p>A standalone React and Electron application with OLED themes and encrypted saved sign-in. No embedded Discord website.</p></article>
         <article class="feature"><span class="feature-icon" aria-hidden="true">/</span><h3>ZuzuBot commands</h3><p>Use /help, /ping, /rules, /members, /roll and /time in server channels. Owners control whether the bot is enabled.</p></article>
         <article class="feature"><span class="feature-icon" aria-hidden="true">◈</span><h3>Friends and direct messages</h3><p>Send friend requests and privately message accepted friends in the Windows app.</p></article><article class="feature"><span class="feature-icon" aria-hidden="true">◇</span><h3>Windows account setup</h3><p>Use a ZuzuCord ID and optionally remember your sign-in through Windows-encrypted session storage.</p></article>
-        <article class="feature"><span class="feature-icon" aria-hidden="true">♢</span><h3>Member management</h3><p>Invite members, appoint server admins, and manage community membership permissions.</p></article>
+        <article class="feature"><span class="feature-icon" aria-hidden="true">♢</span><h3>Server roles and permissions</h3><p>Create colored roles for Moderators, Helpers and more. Server owners assign members and control management permissions.</p></article>
+        <article class="feature"><span class="feature-icon" aria-hidden="true">✧</span><h3>Server boosting</h3><p>ServerBoostCredits expand channel capacity. Developers issue credits; members can boost servers they join.</p></article>
+        <article class="feature"><span class="feature-icon" aria-hidden="true">↺</span><h3>Repair and reinstall</h3><p>New Windows setup detects an existing installation and offers repair/reinstall or uninstall. Account settings stay intact.</p></article>
+        <article class="feature"><span class="feature-icon" aria-hidden="true">◎</span><h3>Website-to-app sync</h3><p>Keep your colors, gradient, effects and preferred community synced between the website and desktop application.</p></article>
       </div>
     </section>
 
@@ -101,10 +104,10 @@
       <div class="section-top"><div><p class="kicker">GET THE APP</p><h2 id="downloads-heading">Download ZuzuCord<span class="period">.</span></h2></div></div>
       <div class="download-card">
         <div class="download-icon" aria-hidden="true">▣</div>
-        <div class="download-info"><h3>ZuzuCord for Windows</h3><p>Windows 10/11 · x64 · Portable build</p><span id="release-label">No published release detected</span></div>
+        <div class="download-info"><h3>ZuzuCord for Windows</h3><p>Windows 10/11 · x64 · Installer or portable ZIP</p><span id="release-label">No published release detected</span></div>
         <a id="release-download" class="button button-light" href="https://github.com/taithedev/Zuzucord/actions/workflows/windows-build.yml">View build artifacts <span aria-hidden="true">↗</span></a>
       </div>
-      <div class="download-details"><p><strong>How to install:</strong> Use a published release asset when available. For a development build, open GitHub Actions, select a successful Windows build, and download its artifact (GitHub sign-in may be required). Extract the ZIP, then run ZuzuCord.exe.</p><p><strong>Note:</strong> ZuzuCord is its own social application, not Discord. It does not connect to Discord user accounts.</p></div>
+      <div class="download-details"><p><strong>Setup:</strong> Download the Windows installer from GitHub Releases. The installer includes an existing-install check, repair/reinstall, uninstall, desktop shortcut and Start Menu entry. Portable ZIP downloads remain available on the release page.</p><p><strong>Note:</strong> ZuzuCord is its own social application, not Discord. It does not connect to Discord user accounts.</p></div>
     </section>
 
     
