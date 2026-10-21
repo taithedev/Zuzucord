@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, safeStorage, shell, nativeTheme } = require
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const updates = require('./updates.cjs');
 let windowRef;
 const memorySecrets = new Map();
 const goodKey = (key) => typeof key === 'string' && /^sb-[a-z0-9_-]+-auth-token$/.test(key) && key.length < 130;
@@ -37,6 +38,8 @@ ipcMain.handle('win:action', (_ev, action) => {
   if (action === 'close') windowRef.close();
 });
 ipcMain.handle('app:version', () => app.getVersion());
+ipcMain.handle('update:check', () => updates.lookupUpdate());
+ipcMain.handle('update:download', (_event, release) => updates.downloadUpdate(release));
 function makeWindow() {
   nativeTheme.themeSource = 'dark';
   windowRef = new BrowserWindow({
@@ -51,7 +54,14 @@ function makeWindow() {
       devTools: !app.isPackaged
     }
   });
-  windowRef.once('ready-to-show', () => windowRef?.show());
+  windowRef.once('ready-to-show', () => {
+    windowRef?.show();
+    if (app.isPackaged) {
+      updates.lookupUpdate()
+        .then(release => { if (release && !windowRef?.isDestroyed()) windowRef?.webContents.send('update:available', release); })
+        .catch(() => { /* manual Update check can show network errors */ });
+    }
+  });
   if (process.env.ZUZUCORD_DEV_URL && !app.isPackaged) windowRef.loadURL(process.env.ZUZUCORD_DEV_URL);
   else windowRef.loadFile(path.join(__dirname, '../dist/index.html'));
   windowRef.webContents.setWindowOpenHandler(({ url }) => {
