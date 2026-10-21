@@ -119,7 +119,7 @@
         feedback.textContent = 'Use 3–24 letters, numbers, or underscores.'; feedback.classList.add('error'); return;
       }
       if(password !== confirm) { feedback.textContent='Passwords do not match.'; feedback.classList.add('error'); return; }
-      if(password.length < 10) { feedback.textContent='Use at least 10 characters.'; feedback.classList.add('error'); return; }
+      if(password.length < 10 || password.length > 128) { feedback.textContent='Use a password with 10–128 characters.'; feedback.classList.add('error'); return; }
       if(!$('reg-terms').checked) { feedback.textContent='Please read and accept the account notice.'; feedback.classList.add('error'); return; }
       btn.disabled = true; feedback.textContent = 'Creating account securely…';
       try {
@@ -129,8 +129,16 @@
           body: JSON.stringify({ username, password })
         });
         const data = await response.json().catch(() => ({}));
-        if(!response.ok || !data.success) throw new Error(data.error || 'Registration unavailable.');
-        feedback.textContent = 'Account ready. Open the Windows app and sign in with ' + username + '@zuzucord.com and your password. This ID is not an email inbox.';
+        if (!response.ok || !data.success) {
+          const fallback = response.status === 429
+            ? 'Too many attempts. Wait a while before trying again.'
+            : response.status >= 500
+              ? 'Account registration is temporarily unavailable. Your username may still be available.'
+              : 'Could not create the account. Please review your details.';
+          throw new Error(typeof data.error === 'string' ? data.error : fallback);
+        }
+        const login = typeof data.login === 'string' ? data.login : username + '@zuzucord.com';
+        feedback.textContent = 'Account created. Sign in to the Windows app with ' + login + '. This is an account ID, not an email inbox.';
         feedback.classList.add('ok');
         form.reset();
         updateAlias();
