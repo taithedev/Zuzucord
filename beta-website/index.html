@@ -51,8 +51,23 @@
       </div>
     </section>
 
+    <section class="section container" id="community" aria-labelledby="community-heading">
+      <div class="section-top"><div><p class="kicker">THE COMMUNITY</p><h2 id="community-heading">Live community statistics<span class="period">.</span></h2></div><p class="section-description">Live aggregate counts from the ZuzuCord Supabase database. Not calculated from GitHub. Account and ban totals belong only to ZuzuCord; today means UTC.</p></div>
+      <div class="community-source"><span class="status-dot"></span> LIVE SUPABASE DATA <span>· account & moderation records</span></div>
+      <div class="stats-grid community-grid" aria-live="polite">
+        <div class="stat"><span class="stat-label">Total registered users</span><strong id="community-users">—</strong><small>ZuzuCord accounts</small></div>
+        <div class="stat"><span class="stat-label">Accounts created today</span><strong id="community-today">—</strong><small>Since 00:00 UTC</small></div>
+        <div class="stat"><span class="stat-label">Currently banned</span><strong id="community-banned">—</strong><small>Active ZuzuCord restrictions</small></div>
+        <div class="stat"><span class="stat-label">Banned today</span><strong id="community-banned-today">—</strong><small>New ban records since 00:00 UTC</small></div>
+        <div class="stat"><span class="stat-label">Community messages</span><strong id="community-messages">—</strong><small>Public rooms and server channels</small></div>
+        <div class="stat"><span class="stat-label">Community servers</span><strong id="community-servers">—</strong><small>Created by ZuzuCord members</small></div>
+      </div>
+      <p class="stats-disclosure" id="community-updated" role="status">Loading aggregate data from Supabase…</p>
+    </section>
+
+
     <section class="section container" id="stats" aria-labelledby="stats-heading">
-      <div class="section-top"><div><p class="kicker">THE PROJECT IN NUMBERS</p><h2 id="stats-heading">Live project stats<span class="period">.</span></h2></div><p class="section-description">Numbers are fetched from GitHub. Unavailable data stays unavailable—no made-up counts.</p></div>
+      <div class="section-top"><div><p class="kicker">DEVELOPMENT ACTIVITY</p><h2 id="stats-heading">Development and downloads<span class="period">.</span></h2></div><p class="section-description">GitHub data is used only for release builds, downloads and repository activity—not ZuzuCord account or moderation totals.</p></div>
       <div class="stats-grid" aria-live="polite">
         <div class="stat"><span class="stat-label">Repository stars</span><strong id="stat-stars">—</strong><small>GitHub stars</small></div>
         <div class="stat"><span class="stat-label">Release downloads</span><strong id="stat-downloads">—</strong><small>Sum of public release assets</small></div>
@@ -63,24 +78,13 @@
     </section>
 
     
-    <section class="section container" id="community" aria-labelledby="community-heading">
-      <div class="section-top"><div><p class="kicker">THE COMMUNITY</p><h2 id="community-heading">Real community statistics<span class="period">.</span></h2></div><p class="section-description">Counts reflect ZuzuCord-specific records only, never accounts from other projects sharing Supabase. Today is counted in UTC.</p></div>
-      <div class="stats-grid community-grid" aria-live="polite">
-        <div class="stat"><span class="stat-label">Total registered users</span><strong id="community-users">—</strong><small>ZuzuCord accounts</small></div>
-        <div class="stat"><span class="stat-label">Accounts created today</span><strong id="community-today">—</strong><small>Since 00:00 UTC</small></div>
-        <div class="stat"><span class="stat-label">Currently banned</span><strong id="community-banned">—</strong><small>Active ZuzuCord restrictions</small></div>
-        <div class="stat"><span class="stat-label">Community messages</span><strong id="community-messages">—</strong><small>Public rooms and server channels</small></div>
-        <div class="stat"><span class="stat-label">Community servers</span><strong id="community-servers">—</strong><small>Created by ZuzuCord members</small></div>
-      </div>
-      <p class="stats-disclosure" id="community-updated" role="status">Loading aggregate data from Supabase…</p>
-    </section>
-
     <section class="section container" id="features" aria-labelledby="features-heading">
       <div class="section-top"><div><p class="kicker">BUILT FOR COMMUNITIES</p><h2 id="features-heading">The essentials, without clutter<span class="period">.</span></h2></div></div>
       <div class="feature-grid">
         <article class="feature"><span class="feature-icon" aria-hidden="true">#</span><h3>Create your own servers</h3><p>Build communities with private member-only text channels, invitations and server roles.</p></article>
         <article class="feature"><span class="feature-icon" aria-hidden="true">↗</span><h3>Connected messaging</h3><p>Send messages in joined servers and public channels using shared Supabase accounts.</p></article>
         <article class="feature"><span class="feature-icon" aria-hidden="true">⌘</span><h3>Native Windows application</h3><p>A standalone C# desktop application, not an embedded Discord website.</p></article>
+        <article class="feature"><span class="feature-icon" aria-hidden="true">/</span><h3>ZuzuBot commands</h3><p>Use /help, /ping, /rules, /members, /roll and /time in server channels. Owners control whether the bot is enabled.</p></article>
         <article class="feature"><span class="feature-icon" aria-hidden="true">◈</span><h3>Friends and direct messages</h3><p>Send friend requests and privately message accepted friends in the Windows app.</p></article><article class="feature"><span class="feature-icon" aria-hidden="true">◇</span><h3>Windows account setup</h3><p>Use a ZuzuCord ID and optionally remember your sign-in through Windows-encrypted session storage.</p></article>
         <article class="feature"><span class="feature-icon" aria-hidden="true">♢</span><h3>Member management</h3><p>Invite members, appoint server admins, and manage community membership permissions.</p></article>
       </div>
