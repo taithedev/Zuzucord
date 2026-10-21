@@ -40,6 +40,12 @@ Use the Windows system's reduced-motion preference to disable animation.
 
 Sign in, username registration, user profile, public text channels, member-only servers, create/join servers, create channels, friend requests, accepted-friend DMs, server members, owner/admin role changes, ZuzuBot commands, active activity summaries, optional beta appearance sync, and Windows UI personalization.
 
-**Not implemented**: Discord API interoperability, official Discord identity, voice/video calls, live games/activities, attachments, global public online presence, notifications, and a bot hosting platform. In the Friends > Online tab the UI does not fabricate presence. The Activity sidebar uses only actual ZuzuCord server/friend data.
+**Not implemented**: Discord API interoperability, official Discord identity, voice/video calls, live games/activities, attachments, platform-wide public presence, notifications, and a bot hosting platform. The Friends > Online tab displays real check-ins from active ZuzuCord React users, visible only to accepted friends through Supabase RLS. No synthetic active users are shown. The Activity sidebar uses only actual ZuzuCord server/friend data.
 
 The app is a **preview**. Type checking and packaging in CI do not replace real Windows UI testing, Supabase multi-user testing, accessibility checks, and signing the release before wide distribution.
+
+## Online presence and privacy
+
+The React client sends a heartbeat approximately every 45 seconds and considers accepted friends online while their last heartbeat is under roughly 135 seconds old. The `zuzucord_friend_presence` table enforces read access for the account owner and **accepted friends only**. Online status is not a public directory and does not describe other clients that do not implement the heartbeat. The table and access rules are in `supabase/migrations/20261021_zuzucord_friend_presence.sql`.
+
+The screenshot-informed UI intentionally follows a familiar communities/friends/activity layout, with original ZuzuCord branding and theme controls rather than using Discord's proprietary icons or claiming official integration.
