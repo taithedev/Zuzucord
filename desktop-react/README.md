@@ -23,7 +23,7 @@ The packaging script creates a valid 256×256 Windows icon from your existing `w
 
 ## Appearance controls
 
-Open **Themes** or the left palette icon. Customize OLED/Graphite/Midnight, six accent swatches or a color picker, a two-stop radial gradient, glass/glow strength, compact view and animated ambient background. UI changes save in the desktop user profile. **Only Supabase-approved beta testers** can sync preferences and preferred server with the separate beta website; corresponding fields are versioned in `supabase/migrations/20261021_zuzucord_react_gradient_preferences.sql`.
+Open **Themes** or the left palette icon. Customize OLED/Graphite/Midnight, six accent swatches or a color picker, a two-stop radial gradient, glass/glow strength, compact view and animated ambient background. UI changes save in the desktop user profile. **Every registered ZuzuCord user** can sync preferences and preferred server with the separate beta website; production preferences are stored in `zuzucord_user_sync` with per-user RLS; the original beta table remains separate.
 
 Use the Windows system's reduced-motion preference to disable animation.
 
@@ -49,3 +49,9 @@ The app is a **preview**. Type checking and packaging in CI do not replace real 
 The React client sends a heartbeat approximately every 45 seconds and considers accepted friends online while their last heartbeat is under roughly 135 seconds old. The `zuzucord_friend_presence` table enforces read access for the account owner and **accepted friends only**. Online status is not a public directory and does not describe other clients that do not implement the heartbeat. The table and access rules are in `supabase/migrations/20261021_zuzucord_friend_presence.sql`.
 
 The screenshot-informed UI intentionally follows a familiar communities/friends/activity layout, with original ZuzuCord branding and theme controls rather than using Discord's proprietary icons or claiming official integration.
+
+## ZuzuCord 0.8 developer ecosystem
+
+Official announcements are a read-only global inbox available to every registered user; developer publishing is rate-limited server-side. User roles (developer, verified, beta tester) are stored in server-managed records, with regular user as the default. ServerBoostCredits are granted by developers only and expand a boosted server's channel capacity from 30 to 40, 50 or 60. Server owners may install approved ZuzuCord bot applications whose tokens are generated and stored hashed by the dedicated Edge API. The separate `zuzucorddevportal` folder is deployable as a Vercel site; a privileged administrator must explicitly provision its developer role.
+
+The packaged app checks official GitHub releases for `v`-prefixed tags. Users may download a qualifying Windows installer through the application, but unsigned EXEs are never silently executed. See `UPDATES.md`.
