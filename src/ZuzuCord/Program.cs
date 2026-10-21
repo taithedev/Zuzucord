@@ -51,6 +51,9 @@ internal sealed class ChatWindow : Form
     private readonly Label channelName = new() { Dock = DockStyle.Fill, ForeColor = Color.White, Text = "# welcome",
         Font = new Font("Segoe UI Semibold", 12), TextAlign = ContentAlignment.MiddleLeft };
     private readonly Button send = Ui.Button("Send", 90);
+    private readonly TextBox search = Ui.Input("Search recent messages...");
+    private readonly List<ChatMessage> cachedMessages = [];
+    private readonly Label account = new() { Dock=DockStyle.Fill, ForeColor=Ui.Secondary, TextAlign=ContentAlignment.MiddleLeft };
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 15000 };
     private readonly List<Room> roomItems = [];
     private bool loading, sending;
@@ -64,33 +67,52 @@ internal sealed class ChatWindow : Form
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Ui.Background; ForeColor = Color.White; Font = Ui.Font;
 
-        var header = new TableLayoutPanel { Dock = DockStyle.Top, Height = 66, ColumnCount = 3,
+        var header = new TableLayoutPanel { Dock = DockStyle.Top, Height = 66, ColumnCount = 4,
             BackColor = Ui.Panel, Padding = new Padding(17, 10, 17, 8) };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 205));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
         header.Controls.Add(new Label { Text = "ZuzuCord  /  V2", Dock = DockStyle.Fill,
             Font = new Font("Segoe UI Semibold", 16), ForeColor = Color.White, TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
         header.Controls.Add(status, 1, 0);
         var reload = Ui.Button("Refresh", 125);
         header.Controls.Add(reload, 2, 0);
+        var profile = Ui.Button("My profile", 135);
+        header.Controls.Add(profile, 3, 0);
+        profile.Click += (_, _) => { using var dialog = new ProfileForm(api); dialog.ShowDialog(this); };
 
         var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2 };
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 252));
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, BackColor = Ui.Side };
+        var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, BackColor = Ui.Side };
         sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 65));
         sidebar.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "  CHANNELS",
             ForeColor = Ui.Secondary, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Semibold", 10) }, 0, 0);
         sidebar.Controls.Add(rooms, 0, 1);
+        var profileArea = new TableLayoutPanel { Dock=DockStyle.Fill, BackColor=Ui.Panel, ColumnCount=2 };
+        profileArea.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        profileArea.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 42));
+        var logout = Ui.Button("↪", 35);
+        logout.AccessibleName = "Sign out";
+        logout.Click += (_, _) => { api.SignOut(); Close(); };
+        profileArea.Controls.Add(account, 0, 0);
+        profileArea.Controls.Add(logout, 1, 0);
+        sidebar.Controls.Add(profileArea, 0, 2);
         shell.Controls.Add(sidebar, 0, 0);
 
-        var right = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3 };
+        var right = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };
         right.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
         right.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         right.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
-        right.Controls.Add(channelName, 0, 0);
+        var channelHeader = new TableLayoutPanel { Dock=DockStyle.Fill, ColumnCount=2, BackColor=Ui.Panel, Padding=new Padding(12, 7, 12, 7) };
+        channelHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        channelHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 255));
+        channelHeader.Controls.Add(channelName, 0, 0);
+        channelHeader.Controls.Add(search, 1, 0);
+        right.Controls.Add(channelHeader, 0, 0);
         right.Controls.Add(transcript, 0, 1);
         var editor = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Padding = new Padding(8, 11, 8, 9) };
         editor.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -104,10 +126,16 @@ internal sealed class ChatWindow : Form
         send.Click += async (_, _) => await Send();
         compose.KeyDown += async (_, e) => { if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; await Send(); } };
         reload.Click += async (_, _) => await Refresh();
+        search.TextChanged += (_, _) => RenderMessages();
+        KeyPreview = true;
+        KeyDown += (_,e)=> { if(e.Control && e.KeyCode==Keys.F){e.SuppressKeyPress=true;search.Focus();} };
+        search.AccessibleName = "Search messages loaded in the current channel";
         timer.Tick += async (_, _) => await Refresh();
         Shown += async (_, _) => { await LoadRooms(); timer.Start(); };
         FormClosed += (_, _) => { timer.Stop(); timer.Dispose(); refreshGate.Dispose(); };
-        status.Text = $"Signed in as {api.Current?.Email ?? "member"}";
+        status.Text = "Connected to ZuzuCord";
+        var identity = api.Current?.Email ?? "member";
+        account.Text = "  " + (identity.EndsWith("@users.zuzucord.invalid", StringComparison.OrdinalIgnoreCase) ? "@" + identity.Split('@')[0] : identity);
         transcript.Text = "Welcome to ZuzuCord V2.\n\nChoose a channel to join the conversation.";
     }
 
@@ -132,6 +160,7 @@ internal sealed class ChatWindow : Form
         if (index < 0 || index >= roomItems.Count) return;
         selectedRoom = roomItems[index].Id;
         channelName.Text = "  #  " + roomItems[index].Name + "     " + roomItems[index].Description;
+        cachedMessages.Clear();
         transcript.Text = "Loading messages…";
         await Refresh();
     }
@@ -146,24 +175,31 @@ internal sealed class ChatWindow : Form
             var list = await api.MessagesAsync(room);
             // A channel switch during the request should not show results for the old channel.
             if (selectedRoom != room) return;
-            var sb = new StringBuilder();
-            foreach (var entry in list)
-            {
-                var author = entry.AuthorId == api.Current?.UserId ? "You" : $"Member {entry.AuthorId.ToString("N")[..7]}";
-                sb.AppendLine($"[{entry.CreatedAt.ToLocalTime():MMM d, HH:mm}] {author}");
-                sb.AppendLine(entry.Content);
-                sb.AppendLine();
-            }
-            var next = sb.Length > 0 ? sb.ToString() : "No messages yet. Start the conversation.";
-            if (transcript.Text != next)
-            {
-                transcript.Text = next;
-                transcript.SelectionStart = transcript.TextLength;
-                transcript.ScrollToCaret();
-            }
+            cachedMessages.Clear();
+            cachedMessages.AddRange(list);
+            RenderMessages();
         }
         catch (Exception e) { Report(e); }
         finally { loading = false; refreshGate.Release(); }
+    }
+
+    private void RenderMessages()
+    {
+        var needle = search.Text.Trim();
+        var sb = new StringBuilder();
+        foreach (var entry in cachedMessages)
+        {
+            var author = entry.AuthorId == api.Current?.UserId ? "You" : $"Member {entry.AuthorId.ToString("N")[..7]}";
+            if (needle.Length > 0 && !entry.Content.Contains(needle, StringComparison.OrdinalIgnoreCase) &&
+                !author.Contains(needle, StringComparison.OrdinalIgnoreCase)) continue;
+            sb.AppendLine($"[{entry.CreatedAt.ToLocalTime():MMM d, HH:mm}] {author}");
+            sb.AppendLine(entry.Content); sb.AppendLine();
+        }
+        var next = sb.Length > 0 ? sb.ToString() : needle.Length > 0 ? "No recent messages match your search." : "No messages yet. Start the conversation.";
+        if (transcript.Text == next) return;
+        transcript.Text = next;
+        transcript.SelectionStart = transcript.TextLength;
+        transcript.ScrollToCaret();
     }
 
     private async Task Send()
