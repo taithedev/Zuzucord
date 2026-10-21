@@ -53,3 +53,13 @@ body{background:#000}
 
 /* Never visually reveal the gated sync form until eligibility is verified. */
 .beta-card [hidden]{display:none!important}
+
+/* Beta workspace: server operations */
+.beta-server-tools{display:grid;gap:10px;margin:12px 0 17px;padding:16px 0;border-top:1px solid #28282e;border-bottom:1px solid #28282e}
+.beta-server-tools label{margin-top:8px}
+.server-tool-row{display:grid;grid-template-columns:minmax(0,1fr) 84px;gap:9px;align-items:center}
+.beta-card .server-tool-row input{min-width:0;width:100%}
+.server-tool-row button{height:45px;color:#08080a;background:#e5e5ea;border:0;border-radius:9px;font:700 12px 'DM Sans',sans-serif;cursor:pointer}
+.server-tool-row button:hover{background:#fff}
+.beta-server-tools #server-share{justify-self:start;text-align:left;font-size:12px;padding:9px 0}
+@media(max-width:440px){.server-tool-row{grid-template-columns:minmax(0,1fr) 70px}}
