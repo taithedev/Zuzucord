@@ -23,6 +23,11 @@ internal sealed record DirectMessage(Guid Id,
     string Content,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
 internal sealed record UserProfile([property: JsonPropertyName("display_name")] string DisplayName, [property: JsonPropertyName("status_text")] string StatusText);
+internal sealed record BetaTheme(
+    [property: JsonPropertyName("theme")] string Theme,
+    [property: JsonPropertyName("accent")] string Accent,
+    [property: JsonPropertyName("sync_enabled")] bool SyncEnabled,
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt);
 internal sealed record Session(string AccessToken, string RefreshToken, Guid UserId, string Email, DateTimeOffset ExpiresAt);
 
 internal sealed class Supabase : IDisposable
@@ -36,6 +41,7 @@ internal sealed class Supabase : IDisposable
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public Session? Current => session;
+    public event Action<string>? RefreshTokenChanged;
     public Supabase() => http.DefaultRequestHeaders.Add("apikey", Key);
 
     private static async Task<string> GetText(HttpResponseMessage response)
@@ -94,6 +100,7 @@ internal sealed class Supabase : IDisposable
         using var response = await http.PostAsJsonAsync("auth/v1/token?grant_type=password", new { email, password });
         session = ParseSession(await GetText(response), email);
         await EnsureAccountAsync();
+        RefreshTokenChanged?.Invoke(session.RefreshToken);
     }
 
     public async Task RegisterUsernameAsync(string username, string password)
@@ -124,14 +131,23 @@ internal sealed class Supabase : IDisposable
     {
         using var response = await http.PostAsJsonAsync("auth/v1/signup", new { email, password });
         var data = await GetText(response);
-        try { session = ParseSession(data, email); if (session is not null) await EnsureAccountAsync(); }
+        try { session = ParseSession(data, email); if (session is not null) { await EnsureAccountAsync(); RefreshTokenChanged?.Invoke(session.RefreshToken); } }
         catch (InvalidOperationException) { session = null; }
+    }
+
+    public async Task RestoreAsync(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token)) throw new InvalidOperationException("No stored login session.");
+        using var response = await http.PostAsJsonAsync("auth/v1/token?grant_type=refresh_token", new { refresh_token = token });
+        session = ParseSession(await GetText(response), "");
+        await EnsureAccountAsync();
+        RefreshTokenChanged?.Invoke(session.RefreshToken);
     }
 
     public void SignOut()
     {
-        // No session tokens are written to disk. Closing the application discards them.
         session = null;
+        LoginVault.Clear();
     }
 
     private async Task EnsureFresh()
@@ -145,6 +161,7 @@ internal sealed class Supabase : IDisposable
             if (session.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(2)) return;
             using var response = await http.PostAsJsonAsync("auth/v1/token?grant_type=refresh_token", new { refresh_token = session.RefreshToken });
             session = ParseSession(await GetText(response), session.Email);
+            RefreshTokenChanged?.Invoke(session.RefreshToken);
         }
         finally { refreshLock.Release(); }
     }
@@ -259,6 +276,33 @@ internal sealed class Supabase : IDisposable
             throw new InvalidOperationException("Messages must be 1 to 2000 characters.");
         await Api(HttpMethod.Post,"zuzucord_direct_messages",
             new {sender_id=session.UserId,recipient_id=friendId,content=content.Trim()});
+    }
+
+    public async Task<bool> IsBetaTesterAsync()
+    {
+        var result = await Api(HttpMethod.Post, "rpc/zuzucord_is_beta_tester", new { });
+        return bool.TryParse(result.Trim(), out var active) && active;
+    }
+
+    public async Task<BetaTheme?> ReadBetaThemeAsync()
+    {
+        if (session is null) return null;
+        var response = await Api(HttpMethod.Get, "zuzucord_beta_sync?select=theme,accent,sync_enabled,updated_at&user_id=eq." + session.UserId);
+        return JsonSerializer.Deserialize<List<BetaTheme>>(response, Json)?.FirstOrDefault();
+    }
+
+    public async Task SaveBetaThemeAsync(string theme, string accent, bool enabled)
+    {
+        if (session is null) throw new InvalidOperationException("Sign in first.");
+        if (!await IsBetaTesterAsync()) throw new UnauthorizedAccessException("Beta theme sync is restricted to approved testers.");
+        var data = new {
+            user_id = session.UserId,
+            theme = ThemeColors.NormalizeTheme(theme),
+            accent = ThemeColors.NormalizeAccent(accent),
+            sync_enabled = enabled,
+            updated_at = DateTimeOffset.UtcNow
+        };
+        await Api(HttpMethod.Post, "zuzucord_beta_sync?on_conflict=user_id", data, "resolution=merge-duplicates,return=minimal");
     }
 
     public void Dispose()
