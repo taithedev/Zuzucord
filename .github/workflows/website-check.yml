@@ -1,0 +1,45 @@
+name: Validate ZuzuCord Website
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/website-check.yml'
+  pull_request:
+    paths:
+      - 'website/**'
+      - '.github/workflows/website-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript syntax
+        run: node --check website/app.js
+      - name: Validate website bundle paths
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          class Assets(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.paths=[]
+              def handle_starttag(self,tag,attrs):
+                  data=dict(attrs)
+                  for attr in ('src','href'):
+                      val=data.get(attr,'')
+                      if val.startswith('./'): self.paths.append(val)
+          root=Path('website')
+          parser=Assets()
+          parser.feed((root/'index.html').read_text())
+          missing=[p for p in parser.paths if not (root/p[2:]).exists()]
+          if missing: raise SystemExit('Missing assets: '+str(missing))
+          print('Website assets validated:',len(parser.paths))
+          PY
