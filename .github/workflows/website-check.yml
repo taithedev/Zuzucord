@@ -1,7 +1,7 @@
 name: Validate ZuzuCord Website
 on:
   push:
-    branches: [main]
+    branches: [main, beta-website]
     paths:
       - 'website/**'
       - '.github/workflows/website-check.yml'
