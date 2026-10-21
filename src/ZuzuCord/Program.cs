@@ -67,10 +67,11 @@ internal sealed class ChatWindow : Form
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Ui.Background; ForeColor = Color.White; Font = Ui.Font;
 
-        var header = new TableLayoutPanel { Dock = DockStyle.Top, Height = 66, ColumnCount = 4,
+        var header = new TableLayoutPanel { Dock = DockStyle.Top, Height = 66, ColumnCount = 5,
             BackColor = Ui.Panel, Padding = new Padding(17, 10, 17, 8) };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 205));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
         header.Controls.Add(new Label { Text = "ZuzuCord  /  V2", Dock = DockStyle.Fill,
@@ -81,6 +82,9 @@ internal sealed class ChatWindow : Form
         var profile = Ui.Button("My profile", 135);
         header.Controls.Add(profile, 3, 0);
         profile.Click += (_, _) => { using var dialog = new ProfileForm(api); dialog.ShowDialog(this); };
+        var friendsButton = Ui.Button("Friends / DMs", 138);
+        header.Controls.Add(friendsButton, 4, 0);
+        friendsButton.Click += (_, _) => { using var friendsDialog = new FriendsForm(api); friendsDialog.ShowDialog(this); };
 
         var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2 };
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 252));
@@ -147,7 +151,7 @@ internal sealed class ChatWindow : Form
             roomItems.Clear(); roomItems.AddRange(list);
             rooms.Items.Clear();
             foreach (var room in roomItems) rooms.Items.Add("  #  " + room.Name);
-            status.Text = $"{api.Current?.Email}  ·  {roomItems.Count} channels";
+            status.Text = $"{roomItems.Count} channels  •  live sync";
             if (rooms.Items.Count > 0) rooms.SelectedIndex = 0;
             else transcript.Text = "No channels are available yet.";
         }
