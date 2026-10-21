@@ -26,7 +26,7 @@ export const client = createClient(SUPABASE_URL, PUBLIC_KEY, {
   }
 });
 
-export type Server = { id: string; name: string; description: string; owner_id: string };
+export type Server = { id: string; name: string; description: string; owner_id: string; accent_color:string; gradient_color:string };
 export type Channel = { id: string; name: string; description: string; server_id?: string };
 export type ChatMessage = {
   id: string; author_id: string; content: string; created_at: string; bot_name?: string | null; external_bot_id?: string | null
@@ -140,7 +140,7 @@ export const appApi = {
   },
   async getServers(): Promise<Server[]> {
     return checked(await client.from('zuzucord_servers')
-      .select('id,name,description,owner_id').order('created_at', { ascending: false })) || [];
+      .select('id,name,description,owner_id,accent_color,gradient_color').order('created_at', { ascending: false })) || [];
   },
   async getChannels(serverId?: string): Promise<Channel[]> {
     const query = serverId
