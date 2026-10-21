@@ -469,7 +469,7 @@ function App() {
   const pendingCount = friends.filter(f => f.status === 'pending' && !f.outgoing).length;
   const messageRows = useMemo(() => (view === 'dm' ? directMessages.map(d => ({
     id: d.id, author_id: d.sender_id, content: d.content, created_at: d.created_at,
-    bot_name: null
+    bot_name: null, external_bot_id: null
   })) : messages), [view, messages, directMessages]);
   const getAuthorName = (m: ChatMessage): string => {
     if (m.bot_name) return m.bot_name;
