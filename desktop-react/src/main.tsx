@@ -15,12 +15,13 @@ import {
   type Appearance, type Channel, type ChatMessage, type FriendRequest, type Member,
   type MessageDM, type Server
 } from './api';
+import { ServerRolesEditor } from './ServerRolesEditor';
 import './styles.css';
 
 type View = 'friends' | 'channel' | 'dm';
 type FriendTab = 'all' | 'pending' | 'online';
 type ModalName = 'settings' | 'new-server' | 'join-server' | 'new-channel' | 'add-friend'
-  | 'members' | 'invite' | 'profile' | 'bot' | 'announcements' | 'boost' | 'install-bot' | null;
+  | 'members' | 'invite' | 'profile' | 'bot' | 'announcements' | 'boost' | 'install-bot' | 'roles' | 'owner-tools' | null;
 type Friend = { id: string; username: string; status: FriendRequest['status']; outgoing: boolean; requestId: string };
 const dateTime = (value: string) => new Date(value).toLocaleString(undefined, {
   month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
@@ -148,6 +149,7 @@ function App() {
   const [profileName, setProfileName] = useState('');
   const [profileStatus, setProfileStatus] = useState('');
   const [botEnabled, setBotEnabled] = useState(true);
+  const [serverPermissions, setServerPermissions] = useState({manage_channels:false,manage_members:false,manage_bots:false});
   const messagesBottom = useRef<HTMLDivElement | null>(null);
   const quickSearch = useRef<HTMLInputElement | null>(null);
   const loadedBeta = useRef(false);
@@ -157,7 +159,7 @@ function App() {
   const currentFriend = friends.find(f => f.id === selectedFriend) || null;
   const isOwner = !!currentServer && currentServer.owner_id === me;
   const currentRole = members.find(m => m.user_id === me)?.role;
-  const canCreateChannel = currentRole === 'owner' || currentRole === 'admin';
+  const canCreateChannel = serverPermissions.manage_channels;
 
   useEffect(() => {
     let alive = true;
@@ -306,6 +308,25 @@ function App() {
     }).catch(showError);
     return () => { alive = false; };
   }, [selectedServer, me]);
+
+  useEffect(() => {
+    if (!selectedServer || !me) { setServerPermissions({manage_channels:false,manage_members:false,manage_bots:false}); return; }
+    let alive=true;
+    const load=async()=>{
+      try {
+        const [manage_channels,manage_members,manage_bots] = await Promise.all([
+          appApi.canServerAction(selectedServer,'manage_channels'),
+          appApi.canServerAction(selectedServer,'manage_members'),
+          appApi.canServerAction(selectedServer,'manage_bots')
+        ]);
+        if(alive)setServerPermissions({manage_channels,manage_members,manage_bots});
+      }catch{
+        if(alive)setServerPermissions({manage_channels:false,manage_members:false,manage_bots:false});
+      }
+    };
+    void load();
+    return ()=>{alive=false;};
+  },[selectedServer,me,modal]);
 
   const loadMessages = useCallback(async () => {
     if (!selectedChannel || view !== 'channel') return;
@@ -550,6 +571,8 @@ function App() {
           <button className="sidebar-nav-button" onClick={() => openModal('add-friend')}><UserPlus size={19} /> Add Friend</button>
           <button className="sidebar-nav-button official-nav" onClick={() => openModal('announcements')}>
             <ShieldCheck size={19} /> ZuzuCord Official <span className="official-badge">OFFICIAL</span></button>
+          {userRoles.includes('owner') && <button className="sidebar-nav-button owner-nav"
+            onClick={()=>openModal('owner-tools')}><Crown size={19}/> Owner controls <span className="official-badge">OWNER</span></button>}
           <div className="sidebar-heading"><span>{selectedServer ? currentServer?.name || 'YOUR SERVER' : 'DIRECT MESSAGES'}</span>
             <IconButton label={selectedServer ? 'Create channel' : 'Add friend'}
               onClick={() => openModal(selectedServer ? 'new-channel' : 'add-friend')}><Plus size={15} /></IconButton></div>
@@ -570,7 +593,7 @@ function App() {
           <div className="sidebar-user">
             <Avatar name={username || 'ZuzuCord'} />
             <div className="user-details"><strong>{username || 'ZuzuCord'}</strong>
-              <span>{userRoles.includes('developer')?'Developer':userRoles.includes('verified')?'Verified':
+              <span>{userRoles.includes('owner')?'Owner':userRoles.includes('developer')?'Developer':userRoles.includes('verified')?'Verified':
                 beta||userRoles.includes('beta_tester')?'Beta tester':'Member'} · Signed in</span></div>
             <IconButton label="Profile" onClick={() => { setModalValue(profileName); setModalOther(profileStatus); setModal('profile'); }}><Settings2 size={18} /></IconButton>
           </div>
@@ -688,9 +711,11 @@ function App() {
             {selectedServer && <div className="activity-box">
               <h3><Bot size={17}/> ZuzuBot <span>{botEnabled ? 'On' : 'Off'}</span></h3>
               <p className="tiny muted">Type /help, /ping, /members, /roll, /time or /rules in chat.</p>
-              {isOwner && <button className="plain-activity-link" onClick={() => openModal('bot')}>Bot settings <ChevronRight size={14}/></button>}
+              {serverPermissions.manage_bots && <button className="plain-activity-link" onClick={() => openModal('bot')}>Bot settings <ChevronRight size={14}/></button>}
               <button className="plain-activity-link" onClick={() => openModal('invite')}>Invite to server <ChevronRight size={14}/></button>
               {canCreateChannel && <button className="plain-activity-link" onClick={() => openModal('new-channel')}>Create text channel <ChevronRight size={14}/></button>}
+              {isOwner && <button className="plain-activity-link" onClick={()=>openModal('roles')}>
+                <Shield size={14}/> Manage server roles <ChevronRight size={14}/></button>}
               {isOwner && <button className="plain-activity-link" onClick={() => openModal('install-bot')}>Manage community bots <ChevronRight size={14}/></button>}
             </div>}
             {selectedServer && <div className="activity-box">
