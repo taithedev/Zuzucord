@@ -551,7 +551,8 @@ internal sealed class ChatWindow : Form
         using var emphasis = new Font(transcript.Font, FontStyle.Bold);
         foreach (var entry in cachedMessages)
         {
-            var author = entry.AuthorId == api.Current?.UserId ? "You" : $"Member {entry.AuthorId.ToString("N")[..7]}";
+            var author = entry.BotName is not null ? entry.BotName + "  [BOT]" :
+                entry.AuthorId == api.Current?.UserId ? "You" : $"Member {entry.AuthorId.ToString("N")[..7]}";
             if (needle.Length > 0 && !entry.Content.Contains(needle, StringComparison.OrdinalIgnoreCase) &&
                 !author.Contains(needle, StringComparison.OrdinalIgnoreCase)) continue;
             transcript.SelectionStart = transcript.TextLength;
