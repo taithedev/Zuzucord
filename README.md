@@ -1,85 +1,50 @@
-<div align="center">
+# ZuzuCord
 
-# Zuzucord
+ZuzuCord is an independent, unofficial Discord desktop wrapper made with Electron. It loads Discord's official web interface in a desktop window.
 
-### A modern Discord client project.
+## Current features
 
-**A community-focused project exploring a customizable, streamlined Discord experience.**
+- Mandatory account-ban and policy warning **on every launch**
+- Required risk acknowledgment checkbox before opening Discord
+- Dedicated resizable Discord window
+- Persistent browser session for sign-in
+- External site links open in the default browser
+- Electron sandbox and context isolation
+- Windows installer build script
 
-[Overview](#overview) · [Planned Features](#planned-features) · [Roadmap](#roadmap) · [Contributing](CONTRIBUTING.md)
+## Run the application
 
-</div>
+Install Node.js LTS and run:
 
----
+```bash
+npm install
+npm start
+```
 
-## Overview
+## Build a Windows installer
 
-**Zuzucord** is an independent Discord client project focused on a clean interface, thoughtful customization, and a responsive user experience.
+```bash
+npm install
+npm run build:win
+```
 
-The project is in its **early planning stage**. Features and platform support described below are goals, not currently available functionality.
+The installer will be written to `dist/`. Builds and compatibility have not yet been verified on a Windows machine.
 
-> **Disclaimer:** Zuzucord is an independent project and is not affiliated with, endorsed by, or sponsored by Discord Inc. Discord and its trademarks belong to their respective owners.
+## Important account-risk notice
 
-## Vision
+Unofficial Discord clients may be unsupported and may violate Discord's terms or policies. Using one may lead to account restrictions, suspension, or a ban. ZuzuCord is not affiliated with, sponsored by, or endorsed by Discord Inc., and its developers cannot prevent or reverse Discord's enforcement decisions. The startup notice does not waive legal rights or absolve unlawful conduct.
 
-- **Clean interface:** A focused layout with clear navigation and polished interactions.
-- **Personalization:** Optional themes, appearance settings, and layout preferences.
-- **Performance:** Responsive navigation and efficient resource use.
-- **Accessibility:** Keyboard-friendly navigation, readable contrast, and sensible defaults.
-- **Privacy and security:** Clear handling of user data and secure authentication patterns.
+For the officially supported experience, use Discord's official desktop application or https://discord.com/app.
 
-## Planned Features
+## Limitations
 
-| Area | Goal | Status |
-| --- | --- | --- |
-| Interface | Modern, responsive client layout | Planned |
-| Themes | Dark mode and appearance customization | Planned |
-| Navigation | Organized servers, channels, and conversations | Planned |
-| Settings | Clear, customizable preferences | Planned |
-| Accessibility | Keyboard navigation and accessible UI | Planned |
-| Integration | Evaluate supported, compliant Discord integration methods | Research |
+This release is a **web wrapper**, not an independently implemented Discord API client or a custom Discord UI. It does not use automated user accounts, ask for raw user tokens, inject scripts into Discord, or promise compatibility with every Discord feature. Discord can change its website at any time.
 
-**Important:** Discord integration must follow Discord's current developer policies and supported APIs. The project does not promise support for user-token automation or bypassing platform restrictions.
+## Source files
 
-## Project Status
+- `main.js`: Electron application and website navigation
+- `preload.js`: minimal, isolated notice controls
+- `notice.html`: mandatory pre-launch disclaimer
+- `package.json`: dependencies and build commands
 
-**Status: Planning / initial setup**
-
-This repository currently serves as the home for Zuzucord's documentation and future development. No working client build, installer, or release is available yet.
-
-## Getting Started
-
-Development setup and installation instructions will be added when the application source code and supported platforms are established.
-
-For now, you can watch the repository for updates or contribute ideas through GitHub issues once they are enabled.
-
-## Roadmap
-
-1. Define supported platforms, framework, and architecture.
-2. Design the core interface and theme system.
-3. Build foundational navigation and settings.
-4. Research and implement supported Discord integrations.
-5. Test usability, accessibility, and performance.
-6. Publish preview builds and installation instructions when ready.
-
-The roadmap is tentative and may change as the project develops.
-
-## Contributing
-
-Contributions, bug reports, and suggestions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Security
-
-Please review [SECURITY.md](SECURITY.md) before reporting a potential vulnerability. Never publish credentials, session tokens, or personal information in issues.
-
-## License
-
-No license has been selected yet. Until a license is added, all rights remain reserved by the copyright holder. Public visibility does not automatically grant permission to reuse or redistribute the code.
-
----
-
-<div align="center">
-
-**Zuzucord** · Built with a focus on simplicity, customization, and usability.
-
-</div>
+See CONTRIBUTING.md and SECURITY.md for project policies.
