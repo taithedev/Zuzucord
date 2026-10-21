@@ -20,21 +20,21 @@ internal static class Program
 
 internal static class Ui
 {
-    public static readonly Color Background = Color.FromArgb(9, 9, 11);
-    public static readonly Color Panel = Color.FromArgb(21, 21, 25);
-    public static readonly Color Side = Color.FromArgb(17, 17, 20);
-    public static readonly Color Secondary = Color.FromArgb(169, 169, 179);
+    public static readonly Color Background = Color.FromArgb(0, 0, 0);
+    public static readonly Color Panel = Color.FromArgb(13, 13, 15);
+    public static readonly Color Side = Color.FromArgb(9, 9, 11);
+    public static readonly Color Secondary = Color.FromArgb(173, 173, 181);
     public static readonly Font Font = new("Segoe UI", 10);
     public static Button Button(string text, int width) => new()
     {
-        Text = text, Width = width, Height = 38, BackColor = Color.FromArgb(48, 48, 55),
+        Text = text, Width = width, Height = 38, BackColor = Color.FromArgb(32, 32, 38),
         ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Margin = new Padding(4),
         Font = Font
     };
     public static TextBox Input(string placeholder) => new()
     {
         PlaceholderText = placeholder, Dock = DockStyle.Fill, Margin = new Padding(5),
-        BackColor = Color.FromArgb(32, 32, 39), ForeColor = Color.White,
+        BackColor = Color.FromArgb(22, 22, 26), ForeColor = Color.White,
         BorderStyle = BorderStyle.FixedSingle, Font = Font
     };
 }
@@ -77,12 +77,12 @@ internal sealed class ChatWindow : Form
         header.Controls.Add(new Label { Text = "ZuzuCord  /  V2", Dock = DockStyle.Fill,
             Font = new Font("Segoe UI Semibold", 16), ForeColor = Color.White, TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
         header.Controls.Add(status, 1, 0);
-        var reload = Ui.Button("Refresh", 125);
+        var reload = SiticoneShell.Action("Refresh", 125);
         header.Controls.Add(reload, 2, 0);
-        var profile = Ui.Button("My profile", 135);
+        var profile = SiticoneShell.Action("My profile", 135);
         header.Controls.Add(profile, 3, 0);
         profile.Click += (_, _) => { using var dialog = new ProfileForm(api); dialog.ShowDialog(this); };
-        var friendsButton = Ui.Button("Friends / DMs", 138);
+        var friendsButton = SiticoneShell.Action("Friends / DMs", 138);
         header.Controls.Add(friendsButton, 4, 0);
         friendsButton.Click += (_, _) => { using var friendsDialog = new FriendsForm(api); friendsDialog.ShowDialog(this); };
 
@@ -124,7 +124,7 @@ internal sealed class ChatWindow : Form
         editor.Controls.Add(compose, 0, 0); editor.Controls.Add(send, 1, 0);
         right.Controls.Add(editor, 0, 2);
         shell.Controls.Add(right, 1, 0);
-        Controls.Add(shell); Controls.Add(header);
+        Controls.Add(shell); Controls.Add(header); Controls.Add(SiticoneShell.Accent());
 
         rooms.SelectedIndexChanged += async (_, _) => await SelectRoom();
         send.Click += async (_, _) => await Send();
@@ -137,9 +137,9 @@ internal sealed class ChatWindow : Form
         timer.Tick += async (_, _) => await Refresh();
         Shown += async (_, _) => { await LoadRooms(); timer.Start(); };
         FormClosed += (_, _) => { timer.Stop(); timer.Dispose(); refreshGate.Dispose(); };
-        status.Text = "Connected to ZuzuCord";
-        var identity = api.Current?.Email ?? "member";
-        account.Text = "  " + (identity.EndsWith("@users.zuzucord.invalid", StringComparison.OrdinalIgnoreCase) ? "@" + identity.Split('@')[0] : identity);
+        status.Text = "ZUZUCORD  •  connected";
+        var identity = Supabase.VisibleIdentity(api.Current?.Email ?? "member");
+        account.Text = "  " + identity;
         transcript.Text = "Welcome to ZuzuCord V2.\n\nChoose a channel to join the conversation.";
     }
 
