@@ -5,19 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#000000">
   <meta name="description" content="ZuzuCord V2, a Windows community client. Download the latest Windows build and view real GitHub project statistics.">
-  <title>ZuzuCord V2 — Download & Community</title>
+  <title>ZuzuCord Beta — Downloads, Community and Theme Sync</title>
   <link rel="icon" type="image/webp" href="./assets/zuzucord-icon.webp">
   <meta property="og:image" content="https://raw.githubusercontent.com/taithedev/Zuzucord/main/website/assets/zuzucord-banner.webp">
   <meta name="application-name" content="ZuzuCord V2">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./beta.css">
   <script src="./app.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
+  <div class="beta-banner"><strong>BETA</strong><span>You are viewing the beta testing website.</span><a href="./sync.html">Tester-only app sync ↗</a></div>
   <header class="topbar">
     <nav class="nav container" aria-label="Primary navigation">
       <a class="brand" href="#home" aria-label="ZuzuCord home"><span class="brandmark" aria-hidden="true"><span></span><span></span></span><span>Zuzu<span class="muted-brand">Cord</span></span><span class="version-tag">V2.1</span></a>
-      <div class="nav-links"><a href="#features">Features</a><a href="#stats">Statistics</a><a href="#account">Create account</a><a href="#downloads">Downloads</a><a href="#questions">FAQ</a></div>
+      <div class="nav-links"><a href="./sync.html">App sync</a><a href="#features">Features</a><a href="#stats">Statistics</a><a href="#account">Create account</a><a href="#downloads">Downloads</a><a href="#questions">FAQ</a></div>
       <a class="nav-github" href="https://github.com/taithedev/Zuzucord" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
     </nav>
   </header>
@@ -28,9 +30,9 @@
         <div class="eyebrow"><span class="status-dot"></span> ZUZUCORD / COMMUNITY / VERSION 2</div>
         <h1 id="hero-title">Your space.<br><span>Your conversations.</span></h1>
         <p class="hero-lead">A dedicated Windows community client with channels, messaging, and one connected account. Made for the communities you build.</p>
-        <div class="hero-actions">
+        <p class="kicker">BETA / EARLY ACCESS FEATURES</p><div class="hero-actions">
           <a id="main-download" class="button button-light" href="https://github.com/taithedev/Zuzucord/actions/workflows/windows-build.yml"><span aria-hidden="true">▣</span> View Windows builds <span aria-hidden="true">↗</span></a>
-          <a class="button button-outline" href="#features">Explore features <span aria-hidden="true">↘</span></a>
+          <a class="button button-outline" href="./sync.html">Beta theme sync <span aria-hidden="true">↘</span></a>
         </div>
         <p class="small-note" id="download-availability" role="status">Official GitHub release downloads appear here when published.</p>
         <div class="hero-details"><span>Windows 10 / 11</span><span class="bullet">•</span><span>64-bit</span><span class="bullet">•</span><span>Built with C# & .NET</span></div>
