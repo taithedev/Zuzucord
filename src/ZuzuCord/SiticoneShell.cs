@@ -47,8 +47,9 @@ internal static class SiticoneShell
         var panel = Create("SiticonePanel") ?? new Panel();
         panel.Dock = DockStyle.Top;
         panel.Height = 3;
-        panel.BackColor = Color.FromArgb(180, 180, 187);
-        Set(panel, "FillColor", Color.FromArgb(180, 180, 187));
+        panel.BackColor = ThemeColors.Accent;
+        panel.Tag = "zuzu-accent";
+        Set(panel, "FillColor", ThemeColors.Accent);
         return panel;
     }
 
@@ -68,7 +69,7 @@ internal static class SiticoneShell
         Set(control, "TextColor", control.ForeColor);
         Set(control, "HoverBackColor", primary ? Color.White : Color.FromArgb(64, 64, 70));
         Set(control, "PressedBackColor", Color.FromArgb(94, 94, 101));
-        Set(control, "BorderColor", Color.FromArgb(79, 79, 86));
+        Set(control, "BorderColor", ThemeColors.Accent);
         Set(control, "CornerRadiusTopLeft", 11);
         Set(control, "CornerRadiusTopRight", 11);
         Set(control, "CornerRadiusBottomLeft", 11);
