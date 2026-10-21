@@ -27,6 +27,7 @@ internal sealed record BetaTheme(
     [property: JsonPropertyName("theme")] string Theme,
     [property: JsonPropertyName("accent")] string Accent,
     [property: JsonPropertyName("sync_enabled")] bool SyncEnabled,
+    [property: JsonPropertyName("last_server_id")] Guid? LastServerId,
     [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt);
 internal sealed record Session(string AccessToken, string RefreshToken, Guid UserId, string Email, DateTimeOffset ExpiresAt);
 
@@ -292,7 +293,7 @@ internal sealed partial class Supabase : IDisposable
     public async Task<BetaTheme?> ReadBetaThemeAsync()
     {
         if (session is null) return null;
-        var response = await Api(HttpMethod.Get, "zuzucord_beta_sync?select=theme,accent,sync_enabled,updated_at&user_id=eq." + session.UserId);
+        var response = await Api(HttpMethod.Get, "zuzucord_beta_sync?select=theme,accent,sync_enabled,last_server_id,updated_at&user_id=eq." + session.UserId);
         return JsonSerializer.Deserialize<List<BetaTheme>>(response, Json)?.FirstOrDefault();
     }
 
@@ -308,6 +309,18 @@ internal sealed partial class Supabase : IDisposable
             updated_at = DateTimeOffset.UtcNow
         };
         await Api(HttpMethod.Post, "zuzucord_beta_sync?on_conflict=user_id", data, "resolution=merge-duplicates,return=minimal");
+    }
+
+    public async Task SaveBetaSelectedServerAsync(Guid? serverId)
+    {
+        if (session is null) throw new InvalidOperationException("Sign in first.");
+        if (!await IsBetaTesterAsync()) return;
+        var current = await ReadBetaThemeAsync();
+        if (current is null || !current.SyncEnabled) return;
+        await Api(new HttpMethod("PATCH"),
+            "zuzucord_beta_sync?user_id=eq." + session.UserId,
+            new { last_server_id = serverId, updated_at = DateTimeOffset.UtcNow },
+            "return=minimal");
     }
 
     public void Dispose()
