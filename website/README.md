@@ -26,3 +26,7 @@ Branch `beta-website` has an experimental UI and bug-report links. Keep its depl
 ## Public login alias
 
 ZuzuCord sign-in IDs are shown as `username@zuzucord.com`. These are **aliases, not actual mailboxes**. The Supabase database generates the alias from each unique username; the Auth service retains its internal reserved identifier so earlier accounts are not invalidated. Password recovery by email is not available for this flow.
+
+## v0.6 statistics
+
+Community statistics load from Supabase RPC `zuzucord_public_stats` and refresh once per minute, independent of GitHub. This reports registered ZuzuCord accounts, new accounts today, active bans, bans recorded today, messages and servers. GitHub API counts remain development-only. The `website/community-stats.smoke.test.mjs` exercise verifies counters remain available during GitHub API outages.
