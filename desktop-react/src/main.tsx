@@ -628,13 +628,15 @@ function App() {
         {modal === 'settings' ? <AppearanceEditor value={appearance} beta={beta}
           onSave={async next => { await saveAppearance(next); setModal(null); }}
           onImport={async () => {
-            if (!me || !beta) return;
+            if (!me || !beta) return null;
             try {
               const remote = await appApi.getBeta(me);
               if (!remote) throw Error('No saved beta theme found.');
-              setAppearance(prev => ({ ...validateAppearance(remote),compact:prev.compact }));
+              const next = { ...validateAppearance(remote), compact: appearance.compact };
+              setAppearance(next);
               setStatus('Loaded beta theme from your website account.');
-            } catch (error) { showError(error); }
+              return next;
+            } catch (error) { showError(error); return null; }
           }} />
         : modal === 'members' ? <div className="members-modal">
           {members.map(member => <div className="member-row" key={member.user_id}>
@@ -683,6 +685,14 @@ function App() {
           <button type="submit" className="button button-primary" disabled={busy}>
             {busy ? 'Working…' : 'Save / Continue'} <ChevronRight size={16}/>
           </button>
+          {modal === 'profile' && <button type="button" className="button button-subtle"
+            onClick={async () => {
+              await client.auth.signOut();
+              setSession(null); setUsername(''); setModal(null); setServers([]); setFriends([]);
+              setSelectedFriend(null); setSelectedServer(null); setView('friends');
+              loadedBeta.current = false;
+              setStatus('Signed out of this Windows device.');
+            }}><LogOut size={17}/> Sign out of ZuzuCord</button>}
         </form>}
       </Dialog>}
     </>}
@@ -691,7 +701,7 @@ function App() {
 
 function AppearanceEditor({ value, beta, onSave, onImport }: {
   value: Appearance; beta: boolean; onSave: (next: Appearance) => Promise<void>;
-  onImport: () => Promise<void>
+  onImport: () => Promise<Appearance | null>
 }) {
   const [p, setP] = useState(value);
   const [busy, setBusy] = useState(false);
@@ -738,7 +748,9 @@ function AppearanceEditor({ value, beta, onSave, onImport }: {
           <div className="preview-bubble muted-bubble">Your desktop. Your colors.</div><div className="preview-input">Message #general</div></div>
       </div>
       <p className="tiny muted">Themes are stored on this computer. Beta sync requires server-side approval.</p>
-      {beta && <button className="button button-subtle" onClick={()=>void onImport()}><RefreshCw size={16}/> Import beta website theme</button>}
+      {beta && <button className="button button-subtle"
+        onClick={async()=>{ const remote=await onImport(); if(remote) setP(remote); }}>
+        <RefreshCw size={16}/> Import beta website theme</button>}
       <button className="button button-subtle" onClick={()=>setP({...DEFAULT_APPEARANCE,sync_enabled:false})}>Restore defaults</button>
       <button className="button button-primary full" disabled={busy} onClick={async()=>{setBusy(true); try{await onSave(p);}finally{setBusy(false);}}}>
         <Check size={17}/> Apply & save appearance</button>
