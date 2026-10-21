@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#09090b">
+  <meta name="theme-color" content="#000000">
   <meta name="description" content="ZuzuCord V2, a Windows community client. Download the latest Windows build and view real GitHub project statistics.">
   <title>ZuzuCord V2 — Download & Community</title>
   <link rel="icon" type="image/webp" href="./assets/zuzucord-icon.webp">
@@ -18,7 +18,7 @@
   <div class="beta-ribbon"><strong>BETA WEBSITE</strong> You are viewing an experimental version of ZuzuCord's website. <a href="https://github.com/taithedev/Zuzucord/issues/new?template=bug_report.md" target="_blank" rel="noreferrer">Report a bug ↗</a></div>
   <header class="topbar">
     <nav class="nav container" aria-label="Primary navigation">
-      <a class="brand" href="#home" aria-label="ZuzuCord home"><span class="brandmark" aria-hidden="true"><span></span><span></span></span><span>Zuzu<span class="muted-brand">Cord</span></span><span class="version-tag">V2</span></a>
+      <a class="brand" href="#home" aria-label="ZuzuCord home"><span class="brandmark" aria-hidden="true"><span></span><span></span></span><span>Zuzu<span class="muted-brand">Cord</span></span><span class="version-tag">V2.1</span></a>
       <div class="nav-links"><a href="#features">Features</a><a href="#stats">Statistics</a><a href="#account">Create account</a><a href="#downloads">Downloads</a><a href="#questions">FAQ</a></div>
       <a class="nav-github" href="https://github.com/taithedev/Zuzucord" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
     </nav>
@@ -98,16 +98,17 @@
     
     <section class="section container signup-section" id="account" aria-labelledby="account-heading">
       <div class="signup-copy">
-        <p class="kicker">GET STARTED BEFORE DOWNLOADING</p><h2 id="account-heading">Claim your username<span class="period">.</span></h2>
-        <p>Create a ZuzuCord account without entering an email address. This page only creates the account. Sign in inside the Windows application to start chatting. ZuzuCord is intended for users aged 13 and older.</p>
-        <div class="signup-note"><strong>No email required</strong><span>Because an email isn't attached, password recovery by email is unavailable. Keep your username and password somewhere safe. Do not reuse an important password.</span></div>
+        <p class="kicker">GET STARTED BEFORE DOWNLOADING</p><h2 id="account-heading">Your ZuzuCord ID<span class="period">.</span></h2>
+        <p>Create a ZuzuCord account without entering an email address. This website creates an account; your private conversations stay in the Windows application. Sign in there using your new ZuzuCord ID. ZuzuCord is intended for users aged 13 and older.</p>
+        <div class="signup-note"><strong>No email address required</strong><span>Your ID looks like an email address, but it's a ZuzuCord sign-in alias, not a mailbox. Password recovery by email is not available for these accounts. Use a unique password and keep it safe.</span></div>
       </div>
       <form id="register-form" class="register-form" autocomplete="off">
         <div class="form-head"><img src="./assets/zuzucord-icon.webp" alt="" width="42" height="42"><div><strong>Create a ZuzuCord ID</strong><span>Username + password</span></div></div>
         <label for="reg-username">Username</label>
-        <div class="field-prefix"><span>@</span><input id="reg-username" name="username" autocomplete="username" minlength="3" maxlength="24" pattern="[a-zA-Z0-9_]{3,24}" placeholder="your_username" required spellcheck="false"></div>
+        <div class="field-prefix account-id-field"><input id="reg-username" name="username" autocomplete="username" minlength="3" maxlength="24" pattern="[a-zA-Z0-9_]{3,24}" placeholder="your_username" required spellcheck="false" aria-describedby="alias-hint"><span class="alias-domain">@zuzucord.com</span></div>
+        <p id="alias-hint" class="alias-hint">Your sign-in ID: <strong id="alias-preview">your_username@zuzucord.com</strong></p>
         <label for="reg-password">Password <span class="field-hint">at least 10 characters</span></label>
-        <input id="reg-password" type="password" name="password" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="Enter a secure password">
+        <div class="password-field"><input id="reg-password" type="password" name="password" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="Enter a secure password"><button id="password-toggle" type="button" aria-pressed="false" aria-label="Show password">Show</button></div>
         <label for="reg-confirm">Confirm password</label>
         <input id="reg-confirm" type="password" name="confirm" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="Repeat your password">
         <label class="confirm-check"><input type="checkbox" id="reg-terms" required><span>I'm at least 13, agree to the community guidelines, and understand email-free password recovery is unavailable.</span></label>
