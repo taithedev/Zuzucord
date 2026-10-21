@@ -1,0 +1,10 @@
+/* ZuzuCord Beta — isolated preview styles, not used on main. */
+:root { --beta-outline:#494954; }
+.beta-ribbon{background:#151519;border-bottom:1px solid #35353c;position:relative;z-index:15;padding:10px 20px;text-align:center;color:#dedee5;font-size:12px}
+.beta-ribbon strong{background:#e6e6eb;color:#0b0b0c;border-radius:4px;padding:3px 7px;margin-right:10px;font-size:10px;letter-spacing:1.2px}
+.beta-ribbon a{color:white;text-decoration:underline;text-underline-offset:3px;margin-left:10px}
+.beta-links{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px}
+.beta-links a{color:#d2d2da;font-size:12px;border:1px solid var(--beta-outline);padding:10px 13px;border-radius:8px}
+.preview-window{outline:1px solid #34343b;box-shadow:0 33px 115px rgba(0,0,0,.8)}
+.beta-highlight{display:inline-block;border-radius:6px;background:#23232a;color:#e0e0e8;padding:3px 9px;font-size:10px;letter-spacing:1.3px;font-weight:700}
+@media(max-width:650px){.beta-ribbon{font-size:11px;line-height:1.9}.beta-ribbon a{display:block;margin-left:0}}
