@@ -36,7 +36,7 @@ internal sealed class ZuzuButton : Button
             : pressed ? Color.FromArgb(77, 77, 84)
             : hovering ? ControlPaint.Light(baseColor, .2f) : baseColor;
         using var brush = new SolidBrush(fill);
-        using var outline = new Pen(Focused ? Color.FromArgb(235,235,240) : Color.FromArgb(62,62,69));
+        using var outline = new Pen(Focused ? ThemeColors.Accent : Color.FromArgb(62,62,69));
         e.Graphics.FillPath(brush, path);
         e.Graphics.DrawPath(outline, path);
         var labelColor = Enabled ? ForeColor : Color.FromArgb(107,107,114);
