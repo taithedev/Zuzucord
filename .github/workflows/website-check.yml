@@ -5,11 +5,13 @@ on:
     paths:
       - 'website/**'
       - 'beta-website/**'
+      - 'zuzucorddevportal/**'
       - '.github/workflows/website-check.yml'
   pull_request:
     paths:
       - 'website/**'
       - 'beta-website/**'
+      - 'zuzucorddevportal/**'
       - '.github/workflows/website-check.yml'
   workflow_dispatch:
 permissions:
@@ -25,8 +27,10 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check website/app.js
+          node --check website/sync.js
           node --check beta-website/app.js
           node --check beta-website/sync.js
+          node --check zuzucorddevportal/app.js
       - name: Exercise beta synchronization and Supabase counters
         run: |
           node --test beta-website/sync.smoke.test.mjs
@@ -45,9 +49,10 @@ jobs:
                   for attr in ('src','href'):
                       val=data.get(attr,'')
                       if val.startswith('./'): self.paths.append(val)
-          for root in (Path('website'), Path('beta-website')):
-              files=[root/'index.html', root/'privacy.html', root/'terms.html']
-              if root.name=='beta-website': files.append(root/'sync.html')
+          for root in (Path('website'), Path('beta-website'), Path('zuzucorddevportal')):
+              files=[root/'index.html']
+              if root.name!='zuzucorddevportal':
+                  files.extend([root/'privacy.html',root/'terms.html',root/'sync.html'])
               for document in files:
                   parser=Assets()
                   parser.feed(document.read_text())
@@ -59,4 +64,12 @@ jobs:
               if term not in sync: raise SystemExit('Missing beta auth behavior: '+term)
           if 'localStorage' in sync or 'sessionStorage' in sync:
               raise SystemExit('Beta authentication must remain in memory only')
+          prod=(Path('website')/'sync.js').read_text()
+          if 'zuzucord_user_sync' not in prod or 'zuzucord_is_beta_tester' in prod:
+              raise SystemExit('Production app sync must work without beta tester approval')
+          if 'localStorage' in prod or 'sessionStorage' in prod:
+              raise SystemExit('Website authentication must stay in memory only')
+          portal=(Path('zuzucorddevportal')/'app.js').read_text()
+          if 'zuzucord_has_role' not in portal or 'zuzucord-bot-api' not in portal:
+              raise SystemExit('Developer portal must validate roles and use server-issued bot tokens')
           PY
