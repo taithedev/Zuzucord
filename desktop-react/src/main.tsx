@@ -16,6 +16,7 @@ import {
   type MessageDM, type Server
 } from './api';
 import { ServerRolesEditor } from './ServerRolesEditor';
+import { OwnerConsole } from './OwnerConsole';
 import './styles.css';
 
 type View = 'friends' | 'channel' | 'dm';
@@ -741,9 +742,10 @@ function App() {
         settings:'Appearance & effects', 'new-server':'Create a server','join-server':'Join a server',
         'new-channel':'New text channel','add-friend':'Add a friend',members:'Server members',
         invite:'Invite people',profile:'Your profile',bot:'ZuzuBot settings',
-        announcements:'ZuzuCord Official',boost:'ServerBoostCredits', 'install-bot':'Server bot applications'
+        announcements:'ZuzuCord Official',boost:'ServerBoostCredits', 'install-bot':'Server bot applications',
+        roles:'Server roles & permissions','owner-tools':'ZuzuCord Owner tools'
       }[modal]} subtitle={modal === 'settings' ? 'Make ZuzuCord yours — colors, glass, gradients and motion.' : undefined}
-        onClose={() => setModal(null)} wide={modal === 'settings'}>
+        onClose={() => setModal(null)} wide={modal === 'settings' || modal === 'roles'}>
         {modal === 'settings' ? <AppearanceEditor value={appearance}
           onSave={async next => { await saveAppearance(next); setModal(null); }}
           onImport={async () => {
@@ -782,13 +784,16 @@ function App() {
                 <button className="button button-subtle" onClick={()=>void installSelectedBot(bot.id)}>Install</button>}
             </div>)}
         </div>
+        : modal === 'roles' && selectedServer ? <ServerRolesEditor
+            serverId={selectedServer} members={members} isOwner={isOwner} />
+        : modal === 'owner-tools' && userRoles.includes('owner') ? <OwnerConsole />
         : modal === 'members' ? <div className="members-modal">
           {members.map(member => <div className="member-row" key={member.user_id}>
             <Avatar name={member.username} size="tiny"/><div><strong>{member.username}</strong><small>{member.role}</small></div>
             {isOwner && member.user_id !== me && <select defaultValue={member.role}
               onChange={e=>void roleChange(member.user_id,e.target.value)}>
               <option value="member">Member</option><option value="admin">Admin</option></select>}
-            {(isOwner && member.role !== 'owner' || member.user_id === me && member.role !== 'owner') &&
+            {((serverPermissions.manage_members && member.role !== 'owner' && (member.role !== 'admin' || isOwner)) || member.user_id === me && member.role !== 'owner') &&
               <button className="subtle-button" title={member.user_id === me ? 'Leave server' : 'Remove member'}
                 onClick={async () => {
                   if (!selectedServer) return;
