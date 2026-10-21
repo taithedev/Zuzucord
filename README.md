@@ -12,9 +12,9 @@ ZuzuCord **is not Discord**, does not use Discord user tokens, and is not affili
 
 - Native Windows Forms app with dark OLED-style theme, channel list, refresh, local message search, profile editing, sign in/out
 - Supabase email/password sign-in and **username-only accounts** (created through a server-side registration function)
-- Public channels, messaging, a friends list, friend requests, and direct messages between accepted friends
+- Public channels and messages, private DMs, friend requests, custom servers, member-only server channels, invite codes, server member management, owner/admin roles
 - Isolated RLS-protected `zuzucord_` tables and aggregate community stats
-- Website with user-provided brand art, 3D-tilt/channel-switching demo, GitHub downloads, and live account/ban/message totals
+- Website with user-provided brand art, interactive UI preview, GitHub downloads, and live account/ban/server/message totals
 - A Vercel-ready `beta-website/` folder on `main` and the earlier experimental `beta-website` branch
 - Automated Windows x64 compilation, artifact verification and public preview ZIP release
 
@@ -40,7 +40,7 @@ select user_id, true from public.zuzucord_accounts where username = 'tester_user
 on conflict (user_id) do update set enabled = excluded.enabled;
 ```
 
-Sync is limited to theme and accent. It does **not** sync credentials, chats, media, or arbitrary files.
+Sync includes theme, accent and preferred server. Created/joined servers are always stored in Supabase, while beta-only default-server synchronization requires tester access. It does **not** sync passwords, private tokens or arbitrary files.
 
 ## Compatibility / Windhawk
 
@@ -104,3 +104,14 @@ See `website/privacy.html`, `website/terms.html`, and SECURITY.md for safety and
 ## Deployment
 
 GitHub source changes do **not** automatically make the download site public. GitHub Pages requires an enabled Pages setup and a successful publish workflow; Vercel requires project creation and repository permissions. No live website URL is claimed until confirmed by the host.
+
+
+## Community servers and permissions (v0.5)
+
+The Windows application includes a **Servers** rail. Any signed-in active ZuzuCord user can create a server (limited to 10 owned servers), receive an owner-only invite code, join a server through an invite code, send messages in joined server channels, and manage member lists. Owners and admins can create channels; owners can assign admin/member roles. Owners/admins can remove members according to their privilege, and non-owner members can leave.
+
+Every new database table uses the `zuzucord_` prefix. The server schema comprises `zuzucord_servers`, `zuzucord_server_members`, `zuzucord_server_channels`, and `zuzucord_server_messages`. Messages and channels are protected by membership-aware RLS, while administrative operations run through authenticated, permission-checked PostgreSQL RPCs. Anonymous users cannot create or join servers.
+
+In the separate `beta-website/sync.html` page, approved testers can create/join servers, choose their preferred server, and sync that selection to the Windows app alongside OLED theme colors. When sync is enabled, Windows checks for new memberships and preferences approximately once per minute.
+
+This is **a ZuzuCord community platform inspired by chat apps**, not a complete replica of Discord. Voice/video, file attachments, threaded discussions, event scheduling, web-based full messaging, moderation reports and production end-to-end tests remain future work. Don't claim feature parity or zero errors just from successful builds.
