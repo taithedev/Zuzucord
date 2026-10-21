@@ -11,7 +11,7 @@ on:
       - '.github/workflows/windows-build.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     name: Build Windows x64
@@ -36,3 +36,16 @@ jobs:
           path: dist/windows/
           if-no-files-found: error
           retention-days: 30
+      - name: Package public preview ZIP
+        if: github.event_name == 'push'
+        shell: pwsh
+        run: Compress-Archive -Path dist/windows/* -DestinationPath dist/ZuzuCordV2-win-x64.zip -Force
+      - name: Publish public preview release
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v0.2.0-preview.${{ github.run_number }}"
+          gh release create $tag dist/ZuzuCordV2-win-x64.zip --target main --prerelease --title "ZuzuCord V2 Preview #${{ github.run_number }}" --notes "Unsigned Windows x64 preview. Download the ZIP, extract it, and run ZuzuCord.exe. This version includes account authentication, public chat rooms, and the new native interface. Preview software may still contain issues."
+
