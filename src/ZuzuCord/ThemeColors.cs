@@ -66,7 +66,7 @@ internal static class ThemeColors
         else if (control is Form) control.BackColor = Background;
         else if (control is RichTextBox or ListBox) { control.BackColor = Background; control.ForeColor = Color.White; }
         else if (control is TextBox) { control.BackColor = Input; control.ForeColor = Color.White; }
-        else if (control is TableLayoutPanel or FlowLayoutPanel or Panel)
+        else if (control is TableLayoutPanel or FlowLayoutPanel or System.Windows.Forms.Panel)
         {
             // Preserve the contrast between existing sidebars and center panels.
             var rgb = control.BackColor;
