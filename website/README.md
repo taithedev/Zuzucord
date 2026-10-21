@@ -1,23 +1,24 @@
-# ZuzuCord V2 download website
+# ZuzuCord V2 — Website
 
-Standalone static landing site with live statistics. Open `website/index.html` or deploy the entire folder to GitHub Pages, Vercel, or another static host.
+The standalone static website includes:
+- true-black OLED color palette;
+- user-supplied icon and banner, optimized to WebP for web delivery;
+- mouse-follow tilt and clickable channel preview (**illustrative, no real messages sent**);
+- GitHub release downloads and repository/build statistics;
+- real **ZuzuCord-only** account count, accounts registered since 00:00 UTC, active bans, and public message totals, fetched via an aggregate Supabase RPC;
+- email-free **username + password registration**, via the server-side `zuzucord-register` Edge Function;
+- privacy overview and community guidelines.
 
-## Live data
+### Important account details
 
-Public GitHub API for `taithedev/Zuzucord`:
-- repository stars (`stargazers_count`);
-- total public release asset downloads (up to the first 100 releases);
-- published release count (up to 100);
-- latest GitHub Actions `windows-build.yml` status.
+The website **only creates accounts**. Users sign into the Windows application to access chats. Username-only users have an internal non-deliverable identifier, so **email password recovery is unavailable**. Signup requests are rate limited; passwords are sent only to the registration function and Supabase Auth over HTTPS, not to GitHub or the static host.
 
-If an actual Windows `.exe`, `.msi`, `.msix`, or `.zip` release asset is published, the primary download button links directly to that GitHub asset. Otherwise it links to GitHub release/build pages and explains the download status. No download totals or online users are fabricated.
+Never put Supabase service-role keys or private credentials in website code. The included publishable key is intended for public browser use; all data access must be restricted by RLS and server-side function authorization.
 
-The website works without credentials, but GitHub API rate limits may temporarily hide some statistics. Release download counts are totals across public assets, not unique installations. Stats are not linked to Supabase profiles.
+### Host
 
-### GitHub Pages
+Deploy the `website/` folder to a static host (Vercel root directory `website`, or GitHub Pages). GitHub Actions currently provides an optional manual Pages workflow. Creating/updating repository files alone does not publish a website URL.
 
-Workflow `.github/workflows/website-pages.yml` deploys this folder when Pages is configured for GitHub Actions in the repository's Settings > Pages.
+### Beta testers
 
-## Deployment note
-
-This is a download website, not the ZuzuCord messaging service. Keep Supabase keys and secrets out of it.
+Branch `beta-website` has an experimental UI and bug-report links. Keep its deployment separate from main to avoid overwriting the stable site.
