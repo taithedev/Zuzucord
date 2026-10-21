@@ -40,7 +40,7 @@ Developers can publish **read-only platform announcements** using `zuzucord_publ
 
 ## ServerBoostCredits
 
-Developer-issued credits are nonmonetary and nontransferable. The secure `zuzucord_issue_boost_credits` RPC checks the developer role, and `zuzucord_boost_server` checks membership and a wallet balance before spending a credit. Each level adds 10 community channels; levels 1–3 expand capacity from 30 to 40, 50 and 60.
+Developers issue free nonmonetary Crystals through `zuzucord_grant_crystals`. The developer portal resolves usernames to existing ZuzuCord accounts and records grants. Legacy ServerBoostCredits remain valid at 100 Crystals per boost. Both currencies have no monetary value and cannot be purchased or transferred. The secure `zuzucord_issue_boost_credits` RPC checks the developer role, and `zuzucord_boost_server` checks membership and a wallet balance before spending a credit. Each level adds 10 community channels; levels 1–3 expand capacity from 30 to 40, 50 and 60.
 
 ## User roles
 
@@ -53,3 +53,7 @@ Every registered account is a regular **user** by default. Extra role records ma
 ## Status
 
 The portal code and database/RPCs are committed and deployed to Supabase; its **Vercel website has not been deployed** in this workflow. Live bot requests and multi-user role/credit UX require acceptance tests on deployed sites. The project is still a preview.
+
+## Crystals for server perks
+
+The portal's **Grant Crystals** form replaces the old credit-issuing form. Developers can grant up to 1,000 at once; the Windows app shows Crystal history and allows members to spend 100 on each permanent boost. See `desktop-react/README.md` for unlocks and compatibility rules. Only server owners can change unlocked server branding.
