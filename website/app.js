@@ -81,9 +81,10 @@
       set('community-users', format(Number(d.total_users)));
       set('community-today', format(Number(d.created_today)));
       set('community-banned', format(Number(d.banned_users)));
+      set('community-banned-today', format(Number(d.banned_today)));
       set('community-messages', format(Number(d.total_messages)));
       set('community-servers', format(Number(d.total_servers)));
-      set('community-updated', 'Live ZuzuCord totals · Updated ' + new Date().toLocaleString() + ' · Today starts at 00:00 UTC');
+      set('community-updated', 'Source: ZuzuCord Supabase database · Updated ' + new Date().toLocaleString() + ' · Today starts 00:00 UTC. GitHub statistics are separate.');
     } catch {
       set('community-updated', 'Community statistics are temporarily unavailable. No counts are being estimated.');
     }
@@ -193,7 +194,9 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    $('refresh-stats').addEventListener('click', load);
+    $('refresh-stats').addEventListener('click', () => { load(); loadCommunity(); });
     load(); loadCommunity(); setupRegistration(); setupDemo();
+    // Refresh community totals even if the GitHub API is rate limited.
+    window.setInterval(loadCommunity, 60000);
   });
 })();
