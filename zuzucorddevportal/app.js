@@ -70,7 +70,7 @@ $("announcement-form").addEventListener("submit",async e=>{
  try{await api("/rest/v1/rpc/zuzucord_publish_announcement",{method:"POST",body:{p_title:$("announcement-title").value,p_content:$("announcement-message").value}});$("announcement-form").reset();state("Official announcement published.")}catch(error){state(error.message,true)}
 });
 async function resolveCrystalRecipient(identity){
- const name=identity.trim().toLowerCase().replace(/@zuzucord\\.com$/,'');
+ const name=identity.trim().toLowerCase().replace(/@zuzucord\.com$/,'');
  if(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(name))return name;
  if(!/^[a-z0-9_]{3,24}$/.test(name))throw Error("Enter a valid ZuzuCord username or account UUID.");
  const match=await api("/rest/v1/rpc/zuzucord_find_username",{
