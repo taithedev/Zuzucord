@@ -674,11 +674,11 @@ function App() {
           <label>{modal==='new-server'?'Community name':modal==='join-server'?'16-character invite code':
             modal==='new-channel'?'Channel name':modal==='add-friend'?'Username':modal==='profile'?'Display name':'Value'}</label>
           <input autoFocus required maxLength={modal==='join-server'?16:modal==='profile'?40:48}
-            value={modalValue || (modal==='profile' ? profileName : '')}
+            value={modalValue}
             onChange={e=>setModalValue(e.target.value)}
             placeholder={modal==='new-server'?'My community':modal==='join-server'?'aabbccddeeff1234':
               modal==='new-channel'?'announcements':modal==='add-friend'?'friend_username':'Your name'} />
-          {modal==='profile' && <><label>Status message</label><input maxLength={120} value={modalOther||profileStatus}
+          {modal==='profile' && <><label>Status message</label><input maxLength={120} value={modalOther}
             onChange={e=>setModalOther(e.target.value)} placeholder="What are you working on?"/></>}
           <button type="submit" className="button button-primary" disabled={busy}>
             {busy ? 'Working…' : 'Save / Continue'} <ChevronRight size={16}/>
