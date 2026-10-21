@@ -259,10 +259,26 @@ export const appApi = {
   announcements: async (): Promise<{id:string;title:string;content:string;created_at:string}[]> =>
     checked(await client.from('zuzucord_official_announcements')
       .select('id,title,content,created_at').order('created_at',{ascending:false}).limit(30)) || [],
-  wallet: async (userId: string): Promise<number> => {
+  wallet: async (userId: string): Promise<{crystals:number;legacyCredits:number;totalCrystals:number}> => {
     const record = checked(await client.from('zuzucord_boost_wallets')
-      .select('credits').eq('user_id',userId).maybeSingle());
-    return Number(record?.credits ?? 0);
+      .select('credits,crystals').eq('user_id',userId).maybeSingle());
+    const crystals=Number(record?.crystals ?? 0);
+    const legacyCredits=Number(record?.credits ?? 0);
+    return { crystals, legacyCredits, totalCrystals: crystals + legacyCredits * 100 };
+  },
+  crystalHistory: async (userId:string): Promise<{id:string;amount:number;reason:string;created_at:string}[]> =>
+    checked(await client.from('zuzucord_crystal_transactions')
+      .select('id,amount,reason,created_at').eq('user_id',userId)
+      .order('created_at',{ascending:false}).limit(30)) || [],
+  serverBrand: async (serverId:string): Promise<{accent_color:string;gradient_color:string}> => {
+    const record=checked(await client.from('zuzucord_servers')
+      .select('accent_color,gradient_color').eq('id',serverId).single());
+    return {accent_color:record.accent_color,gradient_color:record.gradient_color};
+  },
+  customizeServer: async (serverId:string,accent:string,gradient:string):Promise<void> => {
+    checked(await client.rpc('zuzucord_customize_boosted_server',{
+      p_server:serverId,p_accent:accent,p_gradient:gradient
+    }));
   },
   serverBoosts: async (serverId: string): Promise<number> => {
     const { count, error } = await client.from('zuzucord_server_boosts')
