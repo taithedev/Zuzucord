@@ -50,7 +50,7 @@ Deno.serve(async request => {
       console.error("Signup limiter unavailable:", slotError.message);
       return respond({ error: "Registration is temporarily unavailable." }, 503);
     }
-    if (!slot) return respond({ error: "Too many registrations. Try again later." }, 429);
+    if (!slot) return respond({ error: "Too many account attempts from this connection. Please wait up to an hour before retrying.", code: "RATE_LIMITED" }, 429);
 
     // Supabase Auth uses an internal, non-deliverable email as a login identifier.
     // No user-owned email address is requested. Password recovery via email is unavailable.
@@ -60,19 +60,26 @@ Deno.serve(async request => {
       user_metadata: { username, registration: "zuzucord" },
     });
     if (error || !data.user) {
-      if (error) console.warn("Registration rejected:", error.message);
-      return respond({ error: "Username unavailable or registration could not complete." }, 409);
+      if (error) console.error("Supabase Auth registration failed:", { code: error.code, status: error.status, message: error.message });
+      const duplicate = error?.code === "email_exists" || /already registered|already exists|duplicate/i.test(error?.message ?? "");
+      if (duplicate) return respond({ error: "That username is already taken.", code: "USERNAME_TAKEN" }, 409);
+      const weakPassword = error?.code === "weak_password";
+      if (weakPassword) return respond({ error: "Choose a stronger password.", code: "WEAK_PASSWORD" }, 400);
+      return respond({ error: "The account service is temporarily unavailable. Try again shortly.", code: "AUTH_UNAVAILABLE" }, 503);
     }
     const { error: insertError } = await supabase.from("zuzucord_accounts")
       .insert({ user_id: data.user.id, username });
     if (insertError) {
-      console.error("Failed to link account:", insertError.message);
-      await supabase.auth.admin.deleteUser(data.user.id);
-      return respond({ error: "Could not finish account setup. Please try another username." }, 503);
+      console.error("ZuzuCord account link failed:", { code: insertError.code, message: insertError.message });
+      const { error: rollbackError } = await supabase.auth.admin.deleteUser(data.user.id);
+      if (rollbackError) console.error("Could not roll back incomplete signup:", rollbackError.message);
+      if (insertError.code === "23505") return respond({ error: "That username is already taken.", code: "USERNAME_TAKEN" }, 409);
+      return respond({ error: "Registration couldn't be completed because of a server issue. Your username is not the problem; retry later.", code: "ACCOUNT_LINK_FAILED" }, 503);
     }
     return respond({
       success: true,
-      message: "Account created. Sign in to the Windows application with your username and password.",
+      login: username + "@zuzucord.com",
+      message: "Your account is ready. Open ZuzuCord for Windows and sign in with your username and password.",
     }, 201);
   } catch (error) {
     console.error("Unexpected registration error:", error instanceof Error ? error.message : "unknown");
