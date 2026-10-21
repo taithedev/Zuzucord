@@ -64,3 +64,27 @@ body{background:#000}
 @media(max-width:880px){.signup-section{grid-template-columns:1fr;gap:25px}.register-form{max-width:550px}}
 @media(max-width:700px){.preview-window{transform:none}.hero-banner{width:min(280px,80%)}.register-form{padding:21px}.preview-chat-top span:last-child{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.preview-window{transform:none!important;transition:none!important}}
+
+/* ZuzuCord V2.1 — account identity / OLED refinement */
+html{scrollbar-color:#343439 #050505}
+::selection{background:#9a9aa4;color:#000}
+:root{--bg:#000;--card:#070708;--card2:#0d0d0e;--line:#222226}
+.hero::before{opacity:.45}
+.preview-window{border-color:#38383d}
+.stat:hover,.feature:hover{border-color:#45454a;transition:border-color .15s}
+.alias-domain{font-weight:700;color:#c5c5cd;white-space:nowrap;padding:0 14px 0 3px;font-size:12px}
+.account-id-field:focus-within{border-color:#a4a4ae;box-shadow:0 0 0 1px #777781}
+.account-id-field input{min-width:0;outline:none}
+.alias-hint{font-size:11px;color:#888893;margin:0 0 8px;line-height:1.5}
+.alias-hint strong{color:#e5e5eb;overflow-wrap:anywhere}
+.register-form .password-field{display:flex;align-items:center;border-radius:10px;background:#141417;border:1px solid #33333b}
+.register-form .password-field:focus-within{border-color:#9d9da8}
+.register-form .password-field input{border:0;background:transparent;min-width:0;outline:none}
+.password-field button{flex:none;cursor:pointer;color:#bbb;background:none;border:0;padding:10px 13px;font-size:11px;letter-spacing:.2px}
+.password-field button:hover{color:#fff}
+.register-submit{background:#f5f5f6}
+.register-submit:hover{background:#fff}
+.form-result.ok{border-left:2px solid #ddd;padding:8px 12px;background:#161619;border-radius:3px}
+.form-result.error{border-left:2px solid #b98080;padding:8px 12px;background:#211516;border-radius:3px}
+.nav-links a:hover{color:#fff}
+@media(max-width:480px){.alias-domain{font-size:10px;padding-right:8px}.register-form .field-prefix input{font-size:12px}.register-form{padding:18px}.signup-section{gap:28px}}
