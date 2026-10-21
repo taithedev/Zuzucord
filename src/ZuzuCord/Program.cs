@@ -68,6 +68,7 @@ internal sealed class ChatWindow : Form
     private readonly List<ZuzuServer> serverItems = [];
     private readonly List<ServerChannel> channelItems = [];
     private Guid? selectedServer;
+    private bool suppressServerSync;
     private readonly Label serverTitle = new() {
         Dock = DockStyle.Fill, Text = "  CHANNELS", ForeColor = Ui.Secondary,
         TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Semibold", 10)
@@ -213,7 +214,12 @@ internal sealed class ChatWindow : Form
                 bounds, active ? Color.White : ThemeColors.Muted,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
         };
-        servers.SelectedIndexChanged += async (_, _) => await SelectServer();
+        servers.SelectedIndexChanged += async (_, _) =>
+        {
+            var fromUser = !suppressServerSync;
+            await SelectServer();
+            if (fromUser) await PushServerChoiceAsync();
+        };
         rooms.SelectedIndexChanged += async (_, _) => await SelectRoom();
         send.Click += async (_, _) => await Send();
         compose.KeyDown += async (_, e) => { if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; await Send(); } };
@@ -261,24 +267,34 @@ internal sealed class ChatWindow : Form
             if (theme is null || !theme.SyncEnabled) return;
             var preset = ThemeColors.NormalizeTheme(theme.Theme);
             var accent = ThemeColors.NormalizeAccent(theme.Accent);
-            if (preset == settings.Theme && accent == settings.Accent) return;
+            if (preset == settings.Theme && accent == settings.Accent
+                && theme.LastServerId == selectedServer) return;
             settings.Theme = preset;
             settings.Accent = accent;
             settings.Save();
             ThemeColors.Configure(settings.Theme, settings.Accent);
             ThemeColors.ApplyToOpenForms();
-            status.Text = "Beta theme synced from website";
+            if (theme.LastServerId != selectedServer)
+                await LoadServers(theme.LastServerId, true);
+            status.Text = "Beta theme and server preferences synchronized.";
         }
         catch (Exception error) { status.Text = "Beta sync unavailable: " + error.Message; }
     }
 
-    private async Task LoadServers(Guid? selectId = null)
+    private async Task PushServerChoiceAsync()
+    {
+        if (!settings.BetaSyncEnabled) return;
+        try { await api.SaveBetaSelectedServerAsync(selectedServer); }
+        catch (Exception error) { status.Text = "Server preference sync failed: " + error.Message; }
+    }
+
+    private async Task LoadServers(Guid? selectId = null, bool forceSelection = false)
     {
         try
         {
             // Populate the server rail from authenticated membership-checked results.
             var list = await api.ServersAsync();
-            var selectedId = selectId ?? selectedServer;
+            var selectedId = forceSelection ? selectId : (selectId ?? selectedServer);
             serverItems.Clear(); serverItems.AddRange(list);
             servers.Items.Clear();
             servers.Items.Add("◉  Public");
@@ -286,7 +302,9 @@ internal sealed class ChatWindow : Form
             var selectedIndex = selectedId is Guid wanted
                 ? serverItems.FindIndex(s => s.Id == wanted) + 1 : 0;
             if (selectedIndex < 0 || selectedIndex >= servers.Items.Count) selectedIndex = 0;
-            servers.SelectedIndex = selectedIndex;
+            suppressServerSync = true;
+            try { servers.SelectedIndex = selectedIndex; }
+            finally { suppressServerSync = false; }
             await SelectServer();
         }
         catch (Exception error) { Report(error); }
@@ -367,7 +385,8 @@ internal sealed class ChatWindow : Form
         try
         {
             var created = await api.CreateServerAsync(prompt.Value);
-            await LoadServers(created);
+            await LoadServers(created, true);
+            await PushServerChoiceAsync();
             status.Text = "Server created. Use Invite to share the code.";
         }
         catch (Exception error) { Report(error); }
@@ -380,7 +399,8 @@ internal sealed class ChatWindow : Form
         try
         {
             var joined = await api.JoinServerAsync(prompt.Value);
-            await LoadServers(joined);
+            await LoadServers(joined, true);
+            await PushServerChoiceAsync();
             status.Text = "Joined server successfully.";
         }
         catch (Exception error) { Report(error); }
