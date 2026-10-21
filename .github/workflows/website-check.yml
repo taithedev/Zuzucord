@@ -27,8 +27,10 @@ jobs:
           node --check website/app.js
           node --check beta-website/app.js
           node --check beta-website/sync.js
-      - name: Exercise beta synchronization behavior
-        run: node --test beta-website/sync.smoke.test.mjs
+      - name: Exercise beta synchronization and Supabase counters
+        run: |
+          node --test beta-website/sync.smoke.test.mjs
+          node --test website/community-stats.smoke.test.mjs
       - name: Validate website bundle paths
         run: |
           python3 - <<'PY'
