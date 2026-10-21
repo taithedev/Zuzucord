@@ -144,3 +144,7 @@ The bot cannot be impersonated by directly inserting `bot_name` from a client be
 The main and beta websites place account totals first and request `public.zuzucord_public_stats()` directly from Supabase every minute. Counts cover **ZuzuCord-specific** registered users, accounts created today (UTC), currently active bans, bans recorded today, community servers and messages. GitHub is used **only** for downloads, releases and build status. The stats RPC returns anonymous aggregate counts only; it does not expose user lists or ban reasons.
 
 The repository migration `supabase/migrations/20261021_zuzucord_v06_bot_and_live_stats.sql` records the exact bot and stats backend. Website automated tests simulate GitHub outages and verify Supabase counters still load. For production deployment, validate the workflows on real Windows machines and verify account, moderation and server behavior with approved test accounts.
+
+## ZuzuCord v0.10: Crystals and server perks
+
+Crystals are free, server-managed points, granted by developers and spent on permanent server boosts (100 per level). Boost levels unlock channel capacity, a custom accent, a gradient and an upgraded-server badge. The desktop application has a Crystals wallet and ledger; the redesigned OLED website explains the tiers without advertising paid currency. Legacy credits remain usable. The implementation and security controls are documented in `desktop-react/README.md` and `supabase/migrations/20261021_zuzucord_crystals_nonmonetary_server_perks.sql`.
