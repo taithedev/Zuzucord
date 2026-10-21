@@ -30,7 +30,7 @@ internal sealed record BetaTheme(
     [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt);
 internal sealed record Session(string AccessToken, string RefreshToken, Guid UserId, string Email, DateTimeOffset ExpiresAt);
 
-internal sealed class Supabase : IDisposable
+internal sealed partial class Supabase : IDisposable
 {
     // A publishable key is intended for public clients. Never put a service-role key here.
     private const string Url = "https://wfqudstuncdldsvxqveu.supabase.co/";
