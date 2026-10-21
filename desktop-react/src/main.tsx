@@ -20,7 +20,7 @@ import './styles.css';
 type View = 'friends' | 'channel' | 'dm';
 type FriendTab = 'all' | 'pending' | 'online';
 type ModalName = 'settings' | 'new-server' | 'join-server' | 'new-channel' | 'add-friend'
-  | 'members' | 'invite' | 'profile' | 'bot' | null;
+  | 'members' | 'invite' | 'profile' | 'bot' | 'announcements' | 'boost' | 'install-bot' | null;
 type Friend = { id: string; username: string; status: FriendRequest['status']; outgoing: boolean; requestId: string };
 const dateTime = (value: string) => new Date(value).toLocaleString(undefined, {
   month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
@@ -137,6 +137,14 @@ function App() {
   const [status, setStatus] = useState('');
   const [rightPanel, setRightPanel] = useState(true);
   const [beta, setBeta] = useState(false);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [walletCredits, setWalletCredits] = useState(0);
+  const [boostLevel, setBoostLevel] = useState(0);
+  const [announcements, setAnnouncements] = useState<{id:string;title:string;content:string;created_at:string}[]>([]);
+  const [botApps, setBotApps] = useState<{id:string;name:string;description:string}[]>([]);
+  const [installedBots, setInstalledBots] = useState<string[]>([]);
+  const [updateRelease, setUpdateRelease] = useState<{tag:string;filename:string;downloadUrl:string;sha256:string|null;notes:string}|null>(null);
+  const [updating, setUpdating] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [profileStatus, setProfileStatus] = useState('');
   const [botEnabled, setBotEnabled] = useState(true);
@@ -242,23 +250,30 @@ function App() {
   useEffect(() => {
     if (!me || loadedBeta.current) return;
     loadedBeta.current = true;
-    appApi.betaEligible().then(async allowed => {
-      setBeta(allowed);
-      if (!allowed || !appearance.sync_enabled) return;
+    Promise.allSettled([
+      appApi.myRoles(me),
+      appApi.betaEligible(),
+      appApi.wallet(me),
+      appApi.announcements()
+    ]).then(async results => {
+      if (results[0].status === 'fulfilled') setUserRoles(results[0].value);
+      if (results[1].status === 'fulfilled') setBeta(results[1].value);
+      if (results[2].status === 'fulfilled') setWalletCredits(results[2].value);
+      if (results[3].status === 'fulfilled') setAnnouncements(results[3].value);
+      if (!appearance.sync_enabled) return;
       const remote = await appApi.getBeta(me);
       if (remote?.sync_enabled) {
-        const next = validateAppearance(remote);
-        setAppearance(current => ({ ...next, compact: current.compact }));
+        setAppearance(current => ({ ...validateAppearance(remote), compact: current.compact }));
         if (typeof remote.last_server_id === 'string') {
           setSelectedServer(remote.last_server_id);
           setView('channel');
         }
       }
-    }).catch(() => { setBeta(false); });
+    }).catch(showError);
   }, [me]);
 
   useEffect(() => {
-    if (!me || !appearance.sync_enabled || !beta) return;
+    if (!me || !appearance.sync_enabled) return;
     const poll = window.setInterval(async () => {
       try {
         const remote = await appApi.getBeta(me);
@@ -271,7 +286,7 @@ function App() {
       } catch { /* Still usable offline if beta sync is temporarily unavailable. */ }
     }, 60000);
     return () => window.clearInterval(poll);
-  }, [me, beta, appearance.sync_enabled]);
+  }, [me, appearance.sync_enabled]);
 
   useEffect(() => {
     let alive = true;
@@ -313,7 +328,7 @@ function App() {
 
   const serverSelect = (id: string | null) => {
     setSelectedServer(id); setView('channel'); setSelectedFriend(null); setQuery('');
-    if (beta && appearance.sync_enabled && me) {
+    if (appearance.sync_enabled && me) {
       void appApi.saveBeta(me, appearance, id).catch(showError);
     }
   };
@@ -335,10 +350,62 @@ function App() {
     finally { setBusy(false); }
   };
 
+  useEffect(() => {
+    if (!window.zuzuDesktop) return;
+    const unsubscribe = window.zuzuDesktop.onUpdateAvailable(release => setUpdateRelease(release));
+    return unsubscribe;
+  }, []);
+  const checkUpdates = async () => {
+    if (!window.zuzuDesktop) { setStatus('Release updates are available in the packaged Windows application.'); return; }
+    try {
+      setUpdating(true);
+      const release = await window.zuzuDesktop.checkUpdates();
+      setUpdateRelease(release);
+      setStatus(release ? 'New ZuzuCord version available: ' + release.tag : 'ZuzuCord is up to date.');
+    } catch (error) { showError(error); } finally { setUpdating(false); }
+  };
+  const downloadUpdate = async () => {
+    if (!updateRelease || !window.zuzuDesktop) return;
+    try {
+      setUpdating(true);
+      const result = await window.zuzuDesktop.downloadUpdate(updateRelease);
+      setStatus(result.note + ' File: ' + result.name);
+      setUpdateRelease(null);
+    } catch (error) { showError(error); } finally { setUpdating(false); }
+  };
+  useEffect(() => {
+    if (!selectedServer) { setBoostLevel(0); setInstalledBots([]); return; }
+    const serverId = selectedServer;
+    Promise.allSettled([appApi.serverBoosts(serverId),appApi.installedBots(serverId),appApi.availableBots()])
+      .then(([boosts,installed,available])=>{
+        if(boosts.status==='fulfilled')setBoostLevel(boosts.value);
+        if(installed.status==='fulfilled')setInstalledBots(installed.value);
+        if(available.status==='fulfilled')setBotApps(available.value);
+      });
+  }, [selectedServer]);
+  const boostSelectedServer = async () => {
+    if (!selectedServer || !me) return;
+    if (!window.confirm('Spend one ServerBoostCredit to permanently upgrade this server?')) return;
+    try {
+      const level = await appApi.boostServer(selectedServer);
+      setBoostLevel(level);
+      setWalletCredits(await appApi.wallet(me));
+      setStatus('Server boosted to level ' + level + '. Channel capacity is now ' + (30+10*level) + '.');
+    } catch(error) { showError(error); }
+  };
+  const installSelectedBot = async (botId:string) => {
+    if(!selectedServer || !isOwner)return;
+    try {
+      await appApi.installBot(selectedServer,botId);
+      setInstalledBots(await appApi.installedBots(selectedServer));
+      setStatus('Bot installed successfully. It can now post through the ZuzuCord Bot API.');
+    } catch(error) { showError(error); }
+  };
+
   const saveAppearance = async (next: Appearance) => {
     setAppearance(next);
-    if (me && beta && next.sync_enabled) {
-      try { await appApi.saveBeta(me, next, selectedServer); setStatus('Appearance saved and synced with your beta account.'); }
+    if (me && next.sync_enabled) {
+      try { await appApi.saveBeta(me, next, selectedServer); setStatus('Appearance saved to your ZuzuCord website and Windows app.'); }
       catch (error) { showError(error); }
     } else setStatus('Appearance saved on this Windows device.');
   };
