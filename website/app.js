@@ -92,6 +92,22 @@
     const form = $('register-form');
     const feedback = $('reg-result');
     if (!form || !feedback) return;
+    const userInput = $('reg-username');
+    const updateAlias = () => {
+      const value = (userInput.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24);
+      set('alias-preview', (value || 'your_username') + '@zuzucord.com');
+    };
+    userInput.addEventListener('input', updateAlias);
+    updateAlias();
+    const reveal = $('password-toggle');
+    reveal?.addEventListener('click', () => {
+      const password = $('reg-password');
+      const showing = password.type === 'password';
+      password.type = showing ? 'text' : 'password';
+      reveal.setAttribute('aria-pressed', String(showing));
+      reveal.setAttribute('aria-label', showing ? 'Hide password' : 'Show password');
+      reveal.textContent = showing ? 'Hide' : 'Show';
+    });
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const username = $('reg-username').value.trim().toLowerCase();
@@ -112,14 +128,17 @@
           headers: { 'apikey': PUBLIC_KEY, 'Content-Type':'application/json' },
           body: JSON.stringify({ username, password })
         });
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if(!response.ok || !data.success) throw new Error(data.error || 'Registration unavailable.');
-        feedback.textContent = 'Account created! You can now sign in to the Windows app using @' + username + ' and your password.';
+        feedback.textContent = 'Account ready. Open the Windows app and sign in with ' + username + '@zuzucord.com and your password. This ID is not an email inbox.';
         feedback.classList.add('ok');
         form.reset();
+        updateAlias();
+        $('reg-password').type = 'password';
+        if (reveal) { reveal.textContent = 'Show'; reveal.setAttribute('aria-pressed', 'false'); }
         loadCommunity();
       } catch (error) {
-        feedback.textContent = error instanceof Error ? error.message : 'Could not create your account.';
+        feedback.textContent = error instanceof Error ? error.message : 'Could not create your account. Please retry.';
         feedback.classList.add('error');
       } finally { btn.disabled=false; }
     });
