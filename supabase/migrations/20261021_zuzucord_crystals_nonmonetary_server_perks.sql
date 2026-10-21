@@ -37,7 +37,8 @@ returns integer language plpgsql security definer set search_path=''
 as $$
 declare result integer;
 begin
- if not (select public.zuzucord_has_role('developer')) then
+ if not (select public.zuzucord_has_role('developer')) or
+    not (select public.zuzucord_my_account_active()) then
   raise exception 'Developer authorization required' using errcode='42501'; end if;
  if p_amount is null or p_amount not between 1 and 1000 then
   raise exception 'Grant 1 to 1,000 Crystals at a time' using errcode='22023'; end if;
@@ -92,8 +93,9 @@ returns void language plpgsql security definer set search_path=''
 as $$
 declare boost_level integer;
 begin
- if not exists(select 1 from public.zuzucord_servers where id=p_server and owner_id=(select auth.uid()))
- then raise exception 'Only the server owner can customize branding' using errcode='42501'; end if;
+ if not (select public.zuzucord_my_account_active()) or
+    not exists(select 1 from public.zuzucord_servers where id=p_server and owner_id=(select auth.uid()))
+ then raise exception 'An active server owner account is required' using errcode='42501'; end if;
  if p_accent !~ '^#[0-9a-fA-F]{6}$' or p_gradient !~ '^#[0-9a-fA-F]{6}$'
  then raise exception 'Use six-digit hex colors' using errcode='22023'; end if;
  select count(*) into boost_level from public.zuzucord_server_boosts where server_id=p_server;
