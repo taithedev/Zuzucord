@@ -30,3 +30,7 @@ For independent deploys of stable and beta, configure separate Vercel projects w
 ## Shared community servers
 
 Approved beta testers can create or join servers from `sync.html`. This uses the same `zuzucord_create_server` and `zuzucord_join_server` database RPCs as the Windows app. Server membership and messages are always shared through Supabase; the additional beta-specific sync saves the current selected server to the RLS-protected `zuzucord_beta_sync.last_server_id`. The app refreshes its server list roughly once per minute. Only joined servers appear in the beta server selector.
+
+## ZuzuCord v0.6 — server bots and stats
+
+The Windows app includes owner-configurable, first-party ZuzuBot slash commands in joined server channels. The beta landing page shows Supabase registration totals, today's signups, active bans and today's ban records. GitHub continues to provide release and download activity only. The website-to-app theme/server sync still requires an approved beta tester; ordinary server bot commands do not require beta status.
