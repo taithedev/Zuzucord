@@ -273,6 +273,7 @@ export const appApi = {
   serverBrand: async (serverId:string): Promise<{accent_color:string;gradient_color:string}> => {
     const record=checked(await client.from('zuzucord_servers')
       .select('accent_color,gradient_color').eq('id',serverId).single());
+    if (!record) throw new Error('Server appearance could not be loaded.');
     return {accent_color:record.accent_color,gradient_color:record.gradient_color};
   },
   customizeServer: async (serverId:string,accent:string,gradient:string):Promise<void> => {
