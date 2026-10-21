@@ -99,16 +99,23 @@
     $("signin-form").reset();
     setStatus("Signed out of the beta website. Your Windows app login was not changed.");
   }
-  async function loadTheme() {
+  async function refreshServers(selectId = null) {
     const servers = await request("/rest/v1/zuzucord_servers?select=id,name&order=name.asc",
       { authorized: true });
     const selector = $("active-server");
+    const selected = selectId ?? selector.value;
     selector.replaceChildren(new Option("Public rooms (no server)", ""));
     for (const server of Array.isArray(servers) ? servers : []) {
       if (typeof server.id === "string" && typeof server.name === "string") {
         selector.add(new Option(server.name, server.id));
       }
     }
+    selector.value = selected;
+    if (selector.selectedIndex < 0) selector.value = "";
+  }
+  async function loadTheme() {
+    await refreshServers();
+    const selector = $("active-server");
     const data = await request("/rest/v1/zuzucord_beta_sync?select=theme,accent,sync_enabled,last_server_id&user_id=eq." +
       encodeURIComponent(accountId), { authorized: true });
     const record = Array.isArray(data) ? data[0] : null;
@@ -155,6 +162,47 @@
       setStatus(error instanceof Error ? error.message : "Could not verify your account.", true);
     } finally { button.disabled = false; }
   }
+  async function serverAction(action) {
+    if (saving || !accessToken || !accountId) return;
+    const button = $(action === "create" ? "server-create" : "server-join");
+    button.disabled = true;
+    try {
+      let path, body;
+      if (action === "create") {
+        const name = $("server-new-name").value.trim();
+        if (name.length < 2 || name.length > 48) throw new Error("Server names must be 2–48 characters.");
+        path = "/rest/v1/rpc/zuzucord_create_server";
+        body = { p_name: name, p_description: "" };
+      } else {
+        const code = $("server-invite").value.trim().toLowerCase();
+        if (!/^[0-9a-f]{16}$/.test(code)) throw new Error("Enter a valid 16-character invite code.");
+        path = "/rest/v1/rpc/zuzucord_join_server";
+        body = { p_invite: code };
+      }
+      const id = await request(path, { method: "POST", body, authorized: true });
+      if (typeof id !== "string") throw new Error("The server request did not return a server ID.");
+      await refreshServers(id);
+      $("server-new-name").value = "";
+      $("server-invite").value = "";
+      setStatus(action === "create"
+        ? "Server created. Select Save to sync it as your default server on Windows."
+        : "Server joined. Select Save to sync it as your default server on Windows.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Server action failed.", true);
+    } finally { button.disabled = false; }
+  }
+  async function showServerInvite() {
+    const id = $("active-server").value;
+    if (!id) { setStatus("Choose a server first.", true); return; }
+    try {
+      const code = await request("/rest/v1/rpc/zuzucord_server_invite", {
+        method: "POST", body: { p_server: id }, authorized: true
+      });
+      if (typeof code !== "string" || !code) throw new Error("Only the server owner can view the invitation code.");
+      setStatus("Invite code: " + code + " — share it privately with someone you want to invite.");
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Invite unavailable.", true); }
+  }
+
   async function saveTheme() {
     if (saving || !accessToken || !accountId) return;
     const button = $("sync-save");
@@ -182,6 +230,9 @@
   document.addEventListener("DOMContentLoaded", () => {
     $("signin-form").addEventListener("submit", signIn);
     $("sync-save").addEventListener("click", saveTheme);
+    $("server-create").addEventListener("click", () => serverAction("create"));
+    $("server-join").addEventListener("click", () => serverAction("join"));
+    $("server-share").addEventListener("click", showServerInvite);
     $("sync-reload").addEventListener("click", async () => {
       try { await loadTheme(); setStatus("Latest app and website preferences loaded."); }
       catch (error) { setStatus(error instanceof Error ? error.message : "Unable to refresh.", true); }
