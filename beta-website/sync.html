@@ -45,7 +45,14 @@
 <div class="color-picker-row"><input id="accent-choice" type="color" value="#c9c9d2"><span id="accent-value">#c9c9d2</span><button type="button" id="reset-choice">Defaults</button></div>
 <label for="active-server">Start in this server on Windows</label>
 <select id="active-server"><option value="">Public rooms (no server)</option></select>
-<p class="helper">Only servers you belong to appear here. Your selected server is saved with the theme.</p>
+<p class="helper">Only servers you've joined appear here. Newly created servers also appear in the Windows app.</p>
+<div class="beta-server-tools">
+  <label for="server-new-name">Create a community server</label>
+  <div class="server-tool-row"><input id="server-new-name" maxlength="48" placeholder="My community" autocomplete="off"><button id="server-create" type="button">Create</button></div>
+  <label for="server-invite">Join using an invitation</label>
+  <div class="server-tool-row"><input id="server-invite" maxlength="16" placeholder="16-character invite code" autocomplete="off"><button id="server-join" type="button">Join</button></div>
+  <button id="server-share" type="button" class="signout-link">Show selected server's invite code (owner only)</button>
+</div>
 <label class="checkbox-line"><input type="checkbox" id="sync-toggle"> Enable app/website appearance and server syncing</label>
 <button class="button button-light" id="sync-save" type="button">Save beta preferences ↗</button>
 <button class="signout-link" id="sync-reload" type="button">Reload saved settings</button>
