@@ -72,3 +72,17 @@ The screenshot-informed UI intentionally follows a familiar communities/friends/
 Official announcements are a read-only global inbox available to every registered user; developer publishing is rate-limited server-side. User roles (developer, verified, beta tester) are stored in server-managed records, with regular user as the default. ServerBoostCredits are granted by developers only and expand a boosted server's channel capacity from 30 to 40, 50 or 60. Server owners may install approved ZuzuCord bot applications whose tokens are generated and stored hashed by the dedicated Edge API. The separate `zuzucorddevportal` folder is deployable as a Vercel site; a privileged administrator must explicitly provision its developer role.
 
 The packaged app checks official GitHub releases for `v`-prefixed tags. Users may download a qualifying Windows installer through the application, but unsigned EXEs are never silently executed. See `UPDATES.md`.
+
+## Crystals economy (v0.10)
+
+Crystals are **nonmonetary, non-purchasable ZuzuCord virtual points**. A developer can grant 1–1,000 Crystals to an existing registered account through the ZuzuCord developer portal. Grants are checked against the developer role on Supabase and recorded in an owner-only transaction ledger. Members can see their current balance and transaction history from the Windows app's **Crystals** rail. Members cannot mint, transfer, purchase, cash out or edit their own balances.
+
+Each permanent server boost costs **100 Crystals** and requires server membership. Upgrades are capped at three levels:
+
+- Level 1: 40 channels plus an owner-selected server accent color.
+- Level 2: 50 channels plus a two-color server gradient.
+- Level 3: 60 channels plus a visible Level 3 boosted-server badge.
+
+The server checks balance and level, locks concurrent upgrades, debits the wallet, records the transaction and adds the boost in **one database transaction**. Existing ServerBoostCredits are **preserved and spendable** at one legacy credit per boost (equivalent to 100 Crystals) rather than being duplicated or deleted. These legacy credits show as Crystal-equivalent spendable balance in the new UI. They remain distinct database units for older app compatibility.
+
+The public website also displays the **real total number of server boosts** from aggregate Supabase statistics. No individual wallet details or transaction histories are public.
