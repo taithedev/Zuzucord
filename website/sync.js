@@ -143,7 +143,7 @@
     event.preventDefault();
     const button = $("login-button");
     button.disabled = true;
-    setStatus("Checking your account and beta authorization…");
+    setStatus("Signing into your ZuzuCord account…");
     try {
       authId = $("login-id").value.trim().toLowerCase();
       const email = loginEmail(authId);
