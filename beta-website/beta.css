@@ -50,3 +50,6 @@ body{background:#000}
 @media(max-width:950px){.beta-layout{grid-template-columns:1fr;gap:44px;padding-block:65px}.beta-card{max-width:550px}.beta-preview{margin-top:30px}}
 @media(max-width:550px){.container{width:calc(100% - 32px)}.beta-card{padding:23px}.beta-layout{padding-block:40px}.beta-intro h1{font-size:48px}.preview-content{grid-template-columns:115px 1fr}.preview-content aside{padding:10px}.preview-content article{padding:11px}.preview-header{font-size:8px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+/* Never visually reveal the gated sync form until eligibility is verified. */
+.beta-card [hidden]{display:none!important}
