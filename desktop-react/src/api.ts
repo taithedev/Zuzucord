@@ -221,8 +221,40 @@ export const appApi = {
   },
   betaEligible: async (): Promise<boolean> =>
     checked(await client.rpc('zuzucord_is_beta_tester')) === true,
+  myRoles: async (userId: string): Promise<string[]> => {
+    const rows = checked(await client.from('zuzucord_user_roles')
+      .select('role').eq('user_id', userId)) || [];
+    return rows.map(row => row.role as string);
+  },
+  announcements: async (): Promise<{id:string;title:string;content:string;created_at:string}[]> =>
+    checked(await client.from('zuzucord_official_announcements')
+      .select('id,title,content,created_at').order('created_at',{ascending:false}).limit(30)) || [],
+  wallet: async (userId: string): Promise<number> => {
+    const record = checked(await client.from('zuzucord_boost_wallets')
+      .select('credits').eq('user_id',userId).maybeSingle());
+    return Number(record?.credits ?? 0);
+  },
+  serverBoosts: async (serverId: string): Promise<number> => {
+    const { count, error } = await client.from('zuzucord_server_boosts')
+      .select('*',{count:'exact',head:true}).eq('server_id',serverId);
+    if(error)throw Error(error.message);
+    return count || 0;
+  },
+  boostServer: async (serverId: string): Promise<number> =>
+    checked(await client.rpc('zuzucord_boost_server',{p_server:serverId})),
+  availableBots: async (): Promise<{id:string;name:string;description:string}[]> =>
+    checked(await client.from('zuzucord_bot_apps').select('id,name,description')
+      .eq('disabled',false).order('name').limit(60)) || [],
+  installedBots: async (serverId:string): Promise<string[]> => {
+    const list = checked(await client.from('zuzucord_server_bot_installs')
+      .select('bot_id').eq('server_id',serverId)) || [];
+    return list.map(row=>row.bot_id);
+  },
+  installBot: async (serverId:string,botId:string): Promise<void> => {
+    checked(await client.rpc('zuzucord_install_bot',{p_server:serverId,p_bot:botId}));
+  },
   getBeta: async (userId: string): Promise<Record<string, unknown> | null> =>
-    checked(await client.from('zuzucord_beta_sync').select('*').eq('user_id', userId).maybeSingle()),
+    checked(await client.from('zuzucord_user_sync').select('*').eq('user_id', userId).maybeSingle()),
   saveBeta: async (userId: string, theme: Appearance, serverId: string | null): Promise<void> => {
     checked(await client.from('zuzucord_beta_sync').upsert({
       user_id: userId,
