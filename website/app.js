@@ -3,7 +3,7 @@
   'use strict';
   const REPO = 'taithedev/Zuzucord';
   const API = 'https://api.github.com/repos/' + REPO;
-  const BUILDS = 'https://github.com/' + REPO + '/actions/workflows/windows-build.yml';
+  const BUILDS = 'https://github.com/' + REPO + '/actions/workflows/react-desktop.yml';
   const RELEASES = 'https://github.com/' + REPO + '/releases';
   const $ = id => document.getElementById(id);
   const format = count => Number.isFinite(count) ? new Intl.NumberFormat().format(count) : '—';
@@ -14,8 +14,10 @@
     return response.json();
   };
   function downloadableAsset(release) {
-    if (!release || !Array.isArray(release.assets)) return null;
-    return release.assets.find(asset => /\.(?:exe|msix|msi|zip)$/i.test(asset.name) && asset.browser_download_url?.startsWith('https://github.com/')) || null;
+    if (!release || !/^v[0-9]/.test(release.tag_name || '') || !Array.isArray(release.assets)) return null;
+    return release.assets.find(asset =>
+      /^ZuzuCord-React-\d+\.\d+\.\d+-x64\.exe$/i.test(asset.name) &&
+      asset.browser_download_url?.startsWith('https://github.com/taithedev/Zuzucord/releases/download/')) || null;
   }
   async function load() {
     const refresh = $('refresh-stats');
@@ -25,11 +27,11 @@
     const [repo, releases, runs] = results.map(item => item.status === 'fulfilled' ? item.value : null);
     if (repo) set('stat-stars', format(repo.stargazers_count));
     if (Array.isArray(releases)) {
-      const published = releases.filter(item => !item.draft);
+      const published = releases.filter(item => !item.draft && /^v[0-9]/.test(item.tag_name || ''));
       const count = published.reduce((acc, release) => acc + (release.assets || []).reduce((total, asset) => total + (asset.download_count || 0), 0), 0);
       set('stat-downloads', format(count));
       set('stat-releases', format(published.length));
-      const latest = published.find(item => !item.prerelease) || published[0];
+      const latest = published.find(item => downloadableAsset(item)) || published[0];
       const asset = downloadableAsset(latest);
       if (latest) set('release-label', 'Latest: ' + latest.tag_name + (latest.prerelease ? ' · preview' : ''));
       const link = $('release-download');
