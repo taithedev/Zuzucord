@@ -82,6 +82,7 @@
       set('community-today', format(Number(d.created_today)));
       set('community-banned', format(Number(d.banned_users)));
       set('community-messages', format(Number(d.total_messages)));
+      set('community-servers', format(Number(d.total_servers)));
       set('community-updated', 'Live ZuzuCord totals · Updated ' + new Date().toLocaleString() + ' · Today starts at 00:00 UTC');
     } catch {
       set('community-updated', 'Community statistics are temporarily unavailable. No counts are being estimated.');
