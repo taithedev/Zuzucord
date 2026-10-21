@@ -46,6 +46,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.2.0-preview.${{ github.run_number }}"
-          gh release create $tag dist/ZuzuCordV2-win-x64.zip --target main --prerelease --title "ZuzuCord V2 Preview #${{ github.run_number }}" --notes "Unsigned Windows x64 preview. Download the ZIP, extract it, and run ZuzuCord.exe. This version includes account authentication, public chat rooms, and the new native interface. Preview software may still contain issues."
+          $tag = "v0.3.0-preview.${{ github.run_number }}"
+          gh release create $tag dist/ZuzuCordV2-win-x64.zip --target main --prerelease --title "ZuzuCord Siticone V2.1 Preview #${{ github.run_number }}" --notes "Unsigned Windows x64 preview. Download the ZIP, extract it, and run ZuzuCord.exe. This version includes Siticone-powered UI controls, native OLED styling, ZuzuCord login aliases, friend requests, public chat rooms and DMs. ZuzuCord addresses are sign-in aliases, not email inboxes. This is an unsigned preview; runtime testing remains necessary."
 
