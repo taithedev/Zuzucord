@@ -6,14 +6,14 @@ ZuzuCord **is not Discord**, does not use Discord user tokens, and is not affili
 
 ## Status
 
-**Beta / preview software.** GitHub Actions builds the .NET application; website CI checks syntax and local assets. Build success does not prove every runtime path works. Voice/video calls, media uploads, full guild moderation, push notifications, and exact ZuzifySocials UI parity are not yet implemented.
+**Beta / preview software (v0.6).** GitHub Actions builds the .NET application; website CI checks syntax and local assets. Build success does not prove every runtime path works. Voice/video calls, media uploads, full guild moderation, push notifications, and exact ZuzifySocials UI parity are not yet implemented.
 
 ## What is implemented
 
-- Native Windows Forms app with dark OLED-style theme, channel list, refresh, local message search, profile editing, sign in/out
+- Native Windows Forms app with OLED Black default, responsive server navigation, channel list, message search, profile editing, custom accent colors, setup, and protected remembered sign-in
 - Supabase email/password sign-in and **username-only accounts** (created through a server-side registration function)
 - Public channels and messages, private DMs, friend requests, custom servers, member-only server channels, invite codes, server member management, owner/admin roles
-- Isolated RLS-protected `zuzucord_` tables and aggregate community stats
+- RLS-protected `zuzucord_` tables, trusted first-party ZuzuBot commands and live aggregated Supabase community stats (registered today, banned today, active bans, users, servers, messages)
 - Website with user-provided brand art, interactive UI preview, GitHub downloads, and live account/ban/server/message totals
 - A Vercel-ready `beta-website/` folder on `main` and the earlier experimental `beta-website` branch
 - Automated Windows x64 compilation, artifact verification and public preview ZIP release
@@ -115,3 +115,17 @@ Every new database table uses the `zuzucord_` prefix. The server schema comprise
 In the separate `beta-website/sync.html` page, approved testers can create/join servers, choose their preferred server, and sync that selection to the Windows app alongside OLED theme colors. When sync is enabled, Windows checks for new memberships and preferences approximately once per minute.
 
 This is **a ZuzuCord community platform inspired by chat apps**, not a complete replica of Discord. Voice/video, file attachments, threaded discussions, event scheduling, web-based full messaging, moderation reports and production end-to-end tests remain future work. Don't claim feature parity or zero errors just from successful builds.
+
+
+## ZuzuBot (v0.6)
+
+Inside a server text channel, type `/help` to list the built-in commands:
+`/ping`, `/rules`, `/members`, `/roll`, and `/time`. The slash command is processed through the authenticated Supabase RPC `zuzucord_run_bot_command`; it posts a command and a labeled **ZuzuBot [BOT]** response that everyone in the channel can see. Server owners can disable or enable the bot in the Windows **ZuzuBot** panel.
+
+The bot cannot be impersonated by directly inserting `bot_name` from a client because the regular-message RLS policy prohibits it. Commands require server membership and active account status and have a 3-second per-user/channel cooldown. It is a fixed-command first-party bot, **not** an AI model, a customizable scripting sandbox, or an official Discord bot.
+
+## Real website account and moderation statistics
+
+The main and beta websites place account totals first and request `public.zuzucord_public_stats()` directly from Supabase every minute. Counts cover **ZuzuCord-specific** registered users, accounts created today (UTC), currently active bans, bans recorded today, community servers and messages. GitHub is used **only** for downloads, releases and build status. The stats RPC returns anonymous aggregate counts only; it does not expose user lists or ban reasons.
+
+The repository migration `supabase/migrations/20261021_zuzucord_v06_bot_and_live_stats.sql` records the exact bot and stats backend. Website automated tests simulate GitHub outages and verify Supabase counters still load. For production deployment, validate the workflows on real Windows machines and verify account, moderation and server behavior with approved test accounts.
