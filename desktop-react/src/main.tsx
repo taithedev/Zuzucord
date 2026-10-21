@@ -13,7 +13,7 @@ import {
   appApi, client, DEFAULT_APPEARANCE, emailForLogin, ensureAccount, getLocalAppearance,
   readableUser, registerUsername, saveLocalAppearance, validateAppearance,
   type Appearance, type Channel, type ChatMessage, type FriendRequest, type Member,
-  type MessageDM, type Server
+  type MessageDM, type Server, type CustomServerRole, type CustomRoleAssignment
 } from './api';
 import { ServerRolesEditor } from './ServerRolesEditor';
 import { OwnerConsole } from './OwnerConsole';
@@ -132,6 +132,8 @@ function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [directMessages, setDirectMessages] = useState<MessageDM[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [serverCustomRoles, setServerCustomRoles] = useState<CustomServerRole[]>([]);
+  const [serverRoleAssignments, setServerRoleAssignments] = useState<CustomRoleAssignment[]>([]);
   const [draft, setDraft] = useState('');
   const [modalValue, setModalValue] = useState('');
   const [modalOther, setModalOther] = useState('');
@@ -327,6 +329,18 @@ function App() {
     };
     void load();
     return ()=>{alive=false;};
+  },[selectedServer,me,modal]);
+
+  useEffect(() => {
+    if (!selectedServer || !me) {
+      setServerCustomRoles([]);setServerRoleAssignments([]);return;
+    }
+    let active=true;
+    Promise.all([appApi.getCustomRoles(selectedServer),appApi.getRoleAssignments(selectedServer)])
+      .then(([roles,assignments])=>{
+        if(active){setServerCustomRoles(roles);setServerRoleAssignments(assignments);}
+      }).catch(()=>{if(active){setServerCustomRoles([]);setServerRoleAssignments([]);}});
+    return ()=>{active=false;};
   },[selectedServer,me,modal]);
 
   const loadMessages = useCallback(async () => {
@@ -789,7 +803,13 @@ function App() {
         : modal === 'owner-tools' && userRoles.includes('owner') ? <OwnerConsole />
         : modal === 'members' ? <div className="members-modal">
           {members.map(member => <div className="member-row" key={member.user_id}>
-            <Avatar name={member.username} size="tiny"/><div><strong>{member.username}</strong><small>{member.role}</small></div>
+            <Avatar name={member.username} size="tiny"/><div><strong>{member.username}</strong>
+            <small>{member.role}</small>
+            {serverRoleAssignments.filter(a=>a.user_id===member.user_id).map(a=>{
+              const role=serverCustomRoles.find(r=>r.id===a.role_id);
+              return role?<span key={a.role_id} className="member-custom-role"
+                style={{color:role.color,borderColor:role.color}}>{role.name}</span>:null;
+            })}</div>
             {isOwner && member.user_id !== me && <select defaultValue={member.role}
               onChange={e=>void roleChange(member.user_id,e.target.value)}>
               <option value="member">Member</option><option value="admin">Admin</option></select>}
