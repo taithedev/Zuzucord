@@ -60,6 +60,20 @@ internal sealed class ChatWindow : Form
     private readonly Supabase api;
     private readonly UserSettings settings;
     private int updateTicks;
+    private readonly ListBox servers = new() {
+        Dock = DockStyle.Fill, BackColor = Ui.Background, ForeColor = Color.White,
+        BorderStyle = BorderStyle.None, Font = new Font("Segoe UI Semibold", 10),
+        IntegralHeight = false
+    };
+    private readonly List<ZuzuServer> serverItems = [];
+    private readonly List<ServerChannel> channelItems = [];
+    private Guid? selectedServer;
+    private readonly Label serverTitle = new() {
+        Dock = DockStyle.Fill, Text = "  CHANNELS", ForeColor = Ui.Secondary,
+        TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Semibold", 10)
+    };
+    private readonly Button createChannel = Ui.Button("+ Channel", 99);
+    private readonly Button invite = Ui.Button("Invite", 80);
     private readonly ListBox rooms = new() { Dock = DockStyle.Fill, BackColor = Ui.Side, ForeColor = Color.White,
         BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 11),
         DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 40, IntegralHeight = false };
@@ -115,15 +129,43 @@ internal sealed class ChatWindow : Form
             editorWindow.ShowDialog(this);
         };
 
-        var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2 };
-        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 252));
+        var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3 };
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 245));
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        var serverRail = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, BackColor = Ui.Background };
+        serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+        serverRail.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 102));
+        serverRail.Controls.Add(new Label {
+            Text = "  SERVERS", Dock = DockStyle.Fill, ForeColor = ThemeColors.Muted,
+            Font = new Font("Segoe UI Semibold", 11), TextAlign = ContentAlignment.MiddleLeft
+        }, 0, 0);
+        serverRail.Controls.Add(servers, 0, 1);
+        var serverActions = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(5) };
+        var createServer = Ui.Button("+ Server", 140);
+        var joinServer = Ui.Button("Join invite", 140);
+        serverActions.Controls.Add(createServer);
+        serverActions.Controls.Add(joinServer);
+        serverRail.Controls.Add(serverActions, 0, 2);
+        shell.Controls.Add(serverRail, 0, 0);
+        createServer.Click += async (_, _) => await CreateServer();
+        joinServer.Click += async (_, _) => await JoinServer();
         var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, BackColor = Ui.Side };
         sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 65));
-        sidebar.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "  CHANNELS",
-            ForeColor = Ui.Secondary, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Semibold", 10) }, 0, 0);
+        var channelTop = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3 };
+        channelTop.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        channelTop.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 102));
+        channelTop.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
+        channelTop.Controls.Add(serverTitle, 0, 0);
+        channelTop.Controls.Add(createChannel, 1, 0);
+        channelTop.Controls.Add(invite, 2, 0);
+        sidebar.Controls.Add(channelTop, 0, 0);
+        createChannel.Enabled = invite.Enabled = false;
+        createChannel.Click += async (_, _) => await CreateChannel();
+        invite.Click += async (_, _) => await ShowInvite();
         sidebar.Controls.Add(rooms, 0, 1);
         var profileArea = new TableLayoutPanel { Dock=DockStyle.Fill, BackColor=Ui.Panel, ColumnCount=2 };
         profileArea.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -134,7 +176,7 @@ internal sealed class ChatWindow : Form
         profileArea.Controls.Add(account, 0, 0);
         profileArea.Controls.Add(logout, 1, 0);
         sidebar.Controls.Add(profileArea, 0, 2);
-        shell.Controls.Add(sidebar, 0, 0);
+        shell.Controls.Add(sidebar, 1, 0);
 
         var right = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };
         right.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
@@ -152,7 +194,7 @@ internal sealed class ChatWindow : Form
         editor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
         editor.Controls.Add(compose, 0, 0); editor.Controls.Add(send, 1, 0);
         right.Controls.Add(editor, 0, 2);
-        shell.Controls.Add(right, 1, 0);
+        shell.Controls.Add(right, 2, 0);
         Controls.Add(shell); Controls.Add(header); Controls.Add(SiticoneShell.Accent());
 
         rooms.DrawItem += (_, e) =>
@@ -171,10 +213,11 @@ internal sealed class ChatWindow : Form
                 bounds, active ? Color.White : ThemeColors.Muted,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
         };
+        servers.SelectedIndexChanged += async (_, _) => await SelectServer();
         rooms.SelectedIndexChanged += async (_, _) => await SelectRoom();
         send.Click += async (_, _) => await Send();
         compose.KeyDown += async (_, e) => { if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; await Send(); } };
-        reload.Click += async (_, _) => await Refresh();
+        reload.Click += async (_, _) => { await LoadServers(); await Refresh(); };
         search.TextChanged += (_, _) => RenderMessages();
         KeyPreview = true;
         KeyDown += (_,e)=> { if(e.Control && e.KeyCode==Keys.F){e.SuppressKeyPress=true;search.Focus();} };
@@ -186,7 +229,7 @@ internal sealed class ChatWindow : Form
         };
         Shown += async (_, _) =>
         {
-            await LoadRooms();
+            await LoadServers();
             await TryPullBetaThemeAsync();
             timer.Start();
         };
@@ -229,31 +272,146 @@ internal sealed class ChatWindow : Form
         catch (Exception error) { status.Text = "Beta sync unavailable: " + error.Message; }
     }
 
-    private async Task LoadRooms()
+    private async Task LoadServers(Guid? selectId = null)
     {
         try
         {
-            var list = await api.RoomsAsync();
-            roomItems.Clear(); roomItems.AddRange(list);
-            rooms.Items.Clear();
-            foreach (var room in roomItems) rooms.Items.Add("  #  " + room.Name);
-            status.Text = $"{roomItems.Count} channels  •  live sync";
-            if (rooms.Items.Count > 0) rooms.SelectedIndex = 0;
-            else transcript.Text = "No channels are available yet.";
+            // Populate the server rail from authenticated membership-checked results.
+            var list = await api.ServersAsync();
+            var selectedId = selectId ?? selectedServer;
+            serverItems.Clear(); serverItems.AddRange(list);
+            servers.Items.Clear();
+            servers.Items.Add("◉  Public");
+            foreach (var server in serverItems) servers.Items.Add("▣  " + server.Name);
+            var selectedIndex = selectedId is Guid wanted
+                ? serverItems.FindIndex(s => s.Id == wanted) + 1 : 0;
+            if (selectedIndex < 0 || selectedIndex >= servers.Items.Count) selectedIndex = 0;
+            servers.SelectedIndex = selectedIndex;
+            await SelectServer();
         }
-        catch (Exception e) { Report(e); }
+        catch (Exception error) { Report(error); }
+    }
+
+    private async Task SelectServer()
+    {
+        if (servers.SelectedIndex < 0) return;
+        selectedRoom = null;
+        channelItems.Clear();
+        cachedMessages.Clear();
+        lastRendered = "";
+        rooms.Items.Clear();
+        var index = servers.SelectedIndex - 1;
+        selectedServer = index < 0 || index >= serverItems.Count ? null : serverItems[index].Id;
+        createChannel.Enabled = selectedServer.HasValue;
+        invite.Enabled = index >= 0 && index < serverItems.Count
+            && serverItems[index].OwnerId == api.Current?.UserId;
+        if (selectedServer is Guid serverId)
+        {
+            serverTitle.Text = "  " + serverItems[index].Name;
+            try
+            {
+                var channels = await api.ServerChannelsAsync(serverId);
+                if (selectedServer != serverId) return;
+                channelItems.AddRange(channels);
+                foreach (var channel in channels) rooms.Items.Add("  #  " + channel.Name);
+                status.Text = serverItems[index].Name + " · " + channels.Count + " channels";
+            }
+            catch (Exception error) { Report(error); }
+        }
+        else
+        {
+            serverTitle.Text = "  PUBLIC ROOMS";
+            try
+            {
+                var list = await api.RoomsAsync();
+                roomItems.Clear(); roomItems.AddRange(list);
+                foreach (var room in list) rooms.Items.Add("  #  " + room.Name);
+                status.Text = list.Count + " public channels";
+            }
+            catch (Exception error) { Report(error); }
+        }
+        if (rooms.Items.Count > 0) rooms.SelectedIndex = 0;
+        else
+        {
+            channelName.Text = selectedServer.HasValue ? "  No channels yet" : "  Public rooms";
+            transcript.Text = "No channels available. Server owners can create a text channel.";
+        }
     }
 
     private async Task SelectRoom()
     {
         var index = rooms.SelectedIndex;
-        if (index < 0 || index >= roomItems.Count) return;
-        selectedRoom = roomItems[index].Id;
-        channelName.Text = "  #  " + roomItems[index].Name + "     " + roomItems[index].Description;
+        if (index < 0) return;
+        if (selectedServer is Guid)
+        {
+            if (index >= channelItems.Count) return;
+            selectedRoom = channelItems[index].Id;
+            channelName.Text = "  #  " + channelItems[index].Name + "     " + channelItems[index].Description;
+        }
+        else
+        {
+            if (index >= roomItems.Count) return;
+            selectedRoom = roomItems[index].Id;
+            channelName.Text = "  #  " + roomItems[index].Name + "     " + roomItems[index].Description;
+        }
         cachedMessages.Clear();
         lastRendered = "";
         transcript.Text = "Loading messages…";
         await Refresh();
+    }
+
+    private async Task CreateServer()
+    {
+        using var prompt = new ServerPrompt("Create a server", "Choose a name for your community. You'll own this server and its #general channel.", "Community name");
+        if (prompt.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            var created = await api.CreateServerAsync(prompt.Value);
+            await LoadServers(created);
+            status.Text = "Server created. Use Invite to share the code.";
+        }
+        catch (Exception error) { Report(error); }
+    }
+
+    private async Task JoinServer()
+    {
+        using var prompt = new ServerPrompt("Join a server", "Enter the 16-character invitation code from a server owner.", "Invitation code", 16);
+        if (prompt.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            var joined = await api.JoinServerAsync(prompt.Value);
+            await LoadServers(joined);
+            status.Text = "Joined server successfully.";
+        }
+        catch (Exception error) { Report(error); }
+    }
+
+    private async Task CreateChannel()
+    {
+        if (selectedServer is not Guid serverId) return;
+        using var prompt = new ServerPrompt("Create a text channel", "Owners and admins can add channels. Use 2–32 lowercase letters, numbers, hyphens or underscores.", "new-channel", 32);
+        if (prompt.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            await api.CreateServerChannelAsync(serverId, prompt.Value);
+            await SelectServer();
+            status.Text = "Channel created.";
+        }
+        catch (Exception error) { Report(error); }
+    }
+
+    private async Task ShowInvite()
+    {
+        if (selectedServer is not Guid serverId) return;
+        try
+        {
+            var code = await api.ServerInviteAsync(serverId);
+            if (string.IsNullOrWhiteSpace(code)) throw new UnauthorizedAccessException("Only the server owner can view the invitation code.");
+            if (MessageBox.Show(this, "Invitation code: " + code + "\n\nCopy to clipboard?",
+                "Invite to ZuzuCord", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                Clipboard.SetText(code);
+        }
+        catch (Exception error) { Report(error); }
     }
 
     private async Task Refresh()
@@ -263,9 +421,11 @@ internal sealed class ChatWindow : Form
         loading = true;
         try
         {
-            var list = await api.MessagesAsync(room);
-            // A channel switch during the request should not show results for the old channel.
-            if (selectedRoom != room) return;
+            var server = selectedServer;
+            var list = server.HasValue
+                ? await api.ServerMessagesAsync(room)
+                : await api.MessagesAsync(room);
+            if (selectedRoom != room || selectedServer != server) return;
             cachedMessages.Clear();
             cachedMessages.AddRange(list);
             RenderMessages();
@@ -323,7 +483,8 @@ internal sealed class ChatWindow : Form
         sending = true; send.Enabled = false;
         try
         {
-            await api.SendAsync(room, content);
+            if (selectedServer.HasValue) await api.SendServerMessageAsync(room, content);
+            else await api.SendAsync(room, content);
             compose.Clear();
             await Refresh();
         }
