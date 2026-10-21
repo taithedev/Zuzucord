@@ -7,7 +7,11 @@ using System.Text.Json.Serialization;
 namespace ZuzuCord;
 
 internal sealed record Room(Guid Id, string Name, string Description);
-internal sealed record ChatMessage(Guid Id, Guid AuthorId, string Content, DateTimeOffset CreatedAt);
+internal sealed record ChatMessage(
+    Guid Id,
+    [property: JsonPropertyName("author_id")] Guid AuthorId,
+    string Content,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
 internal sealed record Session(string AccessToken, string RefreshToken, Guid UserId, string Email, DateTimeOffset ExpiresAt);
 
 internal sealed class Supabase : IDisposable
