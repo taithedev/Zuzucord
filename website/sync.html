@@ -2,7 +2,7 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
-<meta name="description" content="ZuzuCord production tester theme sync">
+<meta name="description" content="ZuzuCord account-to-Windows preferences sync">
 <title>ZuzuCord — Website ↔ App Sync</title>
 <link rel="icon" href="./assets/zuzucord-icon.webp" type="image/webp">
 <link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./sync.css">
@@ -10,23 +10,23 @@
 </head><body>
 
 <header class="topbar"><nav class="nav container">
-<a class="brand" href="./index.html"><img src="./assets/zuzucord-icon.webp" alt="" width="35" height="35" style="border-radius:9px"> ZuzuCord <span class="version-tag">BETA</span></a>
+<a class="brand" href="./index.html"><img src="./assets/zuzucord-icon.webp" alt="" width="35" height="35" style="border-radius:9px"> ZuzuCord <span class="version-tag">SYNC</span></a>
 <a href="https://github.com/taithedev/Zuzucord/issues/new?template=bug_report.md">Report an issue ↗</a>
 </nav></header>
 <main class="container production-layout">
 <section class="production-intro">
 <p class="kicker">CROSS-DEVICE PERSONALIZATION</p>
 <h1>One theme.<br><span>Everywhere.</span></h1>
-<p>Sync your OLED palette, gradients, accent color, motion effects and preferred server from this site to the React Windows application. Only approved production testers can use this feature. Access is checked against Supabase, not just the website interface.</p>
+<p>Sync your OLED palette, gradients, accent color, motion effects and preferred server from this site to the React Windows application. Available to every registered ZuzuCord account. Preferences are private and checked with Supabase row-level security.</p>
 <div class="production-preview" id="theme-preview">
-<div class="preview-header"><span class="preview-dot"></span> ZUZUCORD / LIVE SYNC <span class="preview-version">v0.4</span></div>
+<div class="preview-header"><span class="preview-dot"></span> ZUZUCORD / LIVE SYNC <span class="preview-version">v0.8</span></div>
 <div class="preview-content"><aside><div class="preview-tag">#</div><p>general</p><p>development</p><p>friends</p></aside>
 <article><h3># general</h3><div class="preview-message"><span class="avatar"></span><div><b>Community</b><p>Your preferences can follow your account.</p></div></div>
 <div class="preview-compose">Message #general</div></article></div></div>
 <p class="preview-subtext">Illustrative preview only. No real messages are displayed.</p>
 </section>
-<section class="production-card" aria-label=" synchronization controls">
-<div class="card-title"><div class="mark">↔</div><div><h2>Website ↔ App Sync</h2><p>Available to approved production testers</p></div></div>
+<section class="beta-card" aria-label="Account synchronization controls">
+<div class="card-title"><div class="mark">↔</div><div><h2>Website ↔ App Sync</h2><p>Available to all registered ZuzuCord members</p></div></div>
 <div id="login-panel">
 <form id="signin-form" autocomplete="on">
 <label for="login-id">ZuzuCord username or sign-in ID</label>
@@ -61,12 +61,12 @@
   <button id="server-share" type="button" class="signout-link">Show selected server's invite code (owner only)</button>
 </div>
 <label class="checkbox-line"><input type="checkbox" id="sync-toggle"> Enable app/website appearance and server syncing</label>
-<button class="button button-light" id="sync-save" type="button">Save production preferences ↗</button>
+<button class="button button-light" id="sync-save" type="button">Save account preferences ↗</button>
 <button class="signout-link" id="sync-reload" type="button">Reload saved settings</button>
 <button class="signout-link" id="sync-signout" type="button">Sign out of website</button>
-<p class="helper">Open Appearance in the Windows app and enable production sync there too. The React app checks for changes about once per minute while running. Synchronization is limited to appearance and server selection, not passwords or messages.</p>
+<p class="helper">Open Appearance in the Windows app and enable Website Sync there too. The React app checks for changes about once per minute while running. Synchronization is limited to appearance and server selection, not passwords or messages.</p>
 </div>
-<p id="sync-status" class="sync-status" role="status" aria-live="polite">Sign in to check production eligibility.</p>
+<p id="sync-status" class="sync-status" role="status" aria-live="polite">Sign in to load your private ZuzuCord preferences.</p>
 </section>
 </main>
 <footer><div class="container footer-inner"><p>ZuzuCord · Not affiliated with Discord.</p><a href="./privacy.html">Privacy</a><a href="./terms.html">Rules</a></div></footer>
