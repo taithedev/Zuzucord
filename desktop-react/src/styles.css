@@ -242,3 +242,8 @@ button.activity-server:hover{color:white}
 @media(max-width:820px){.server-rail{display:none}.sidebar{width:210px}.auth-shell{grid-template-columns:1fr}.auth-decoration{display:none}.auth-card{margin:auto}}
 @media(max-height:760px){.appearance-editor{min-height:0}.appearance-controls{max-height:calc(100vh - 180px)}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* Keyboard-accessible quick switch search */
+.sidebar-search input{flex:1;min-width:0;max-width:100%;background:transparent;border:0;outline:none;color:#efe5f7;font-size:11px}
+.sidebar-search input::placeholder{color:#b7acbf}
+.sidebar-search:focus-within{border-color:color-mix(in srgb,var(--accent) 60%,#342342);box-shadow:0 0 0 2px #b48aff16}
