@@ -231,7 +231,11 @@ internal sealed class ChatWindow : Form
         timer.Tick += async (_, _) =>
         {
             await Refresh();
-            if (++updateTicks % 4 == 0) await TryPullBetaThemeAsync();
+            if (++updateTicks % 4 == 0)
+            {
+                await RefreshServerMembershipAsync();
+                await TryPullBetaThemeAsync();
+            }
         };
         Shown += async (_, _) =>
         {
@@ -288,6 +292,19 @@ internal sealed class ChatWindow : Form
         catch (Exception error) { status.Text = "Server preference sync failed: " + error.Message; }
     }
 
+    private async Task RefreshServerMembershipAsync()
+    {
+        try
+        {
+            var latest = await api.ServersAsync();
+            if (latest.Count != serverItems.Count ||
+                latest.Where((server, i) => server.Id != serverItems[i].Id ||
+                                            server.Name != serverItems[i].Name).Any())
+                await LoadServers();
+        }
+        catch (Exception error) { status.Text = "Server refresh failed: " + error.Message; }
+    }
+
     private async Task LoadServers(Guid? selectId = null, bool forceSelection = false)
     {
         try
@@ -342,6 +359,7 @@ internal sealed class ChatWindow : Form
             try
             {
                 var list = await api.RoomsAsync();
+                if (selectedServer.HasValue) return;
                 roomItems.Clear(); roomItems.AddRange(list);
                 foreach (var room in list) rooms.Items.Add("  #  " + room.Name);
                 status.Text = list.Count + " public channels";
