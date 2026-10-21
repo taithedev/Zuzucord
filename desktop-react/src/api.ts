@@ -29,7 +29,7 @@ export const client = createClient(SUPABASE_URL, PUBLIC_KEY, {
 export type Server = { id: string; name: string; description: string; owner_id: string };
 export type Channel = { id: string; name: string; description: string; server_id?: string };
 export type ChatMessage = {
-  id: string; author_id: string; content: string; created_at: string; bot_name?: string | null
+  id: string; author_id: string; content: string; created_at: string; bot_name?: string | null; external_bot_id?: string | null
 };
 export type FriendRequest = {
   id: string; from_user: string; to_user: string; status: 'pending' | 'accepted' | 'declined'
@@ -151,7 +151,7 @@ export const appApi = {
   async getMessages(channelId: string, server: boolean): Promise<ChatMessage[]> {
     const table = server ? 'zuzucord_server_messages' : 'zuzucord_messages';
     const column = server ? 'channel_id' : 'room_id';
-    const fields = server ? 'id,author_id,content,created_at,bot_name' : 'id,author_id,content,created_at';
+    const fields = server ? 'id,author_id,content,created_at,bot_name,external_bot_id' : 'id,author_id,content,created_at';
     const list = checked(await client.from(table).select(fields)
       .eq(column, channelId).order('created_at', { ascending: false }).limit(100));
     return (list || []).reverse() as unknown as ChatMessage[];
