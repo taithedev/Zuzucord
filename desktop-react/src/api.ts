@@ -35,6 +35,8 @@ export type FriendRequest = {
   id: string; from_user: string; to_user: string; status: 'pending' | 'accepted' | 'declined'
 };
 export type Member = { user_id: string; username: string; role: 'owner' | 'admin' | 'member'; joined_at: string };
+export type CustomServerRole = { id:string;server_id:string;name:string;color:string;position:number;manage_channels:boolean;manage_members:boolean;manage_bots:boolean };
+export type CustomRoleAssignment = { user_id:string;role_id:string;server_id:string };
 export type Profile = { user_id: string; display_name: string; status_text: string; avatar_url?: string | null };
 export type MessageDM = {
   id: string; sender_id: string; recipient_id: string; content: string; created_at: string
@@ -183,6 +185,34 @@ export const appApi = {
     checked(await client.rpc('zuzucord_change_member_role', { p_server: serverId, p_target: userId, p_role: role })),
   removeMember: async (serverId: string, userId: string) =>
     checked(await client.rpc('zuzucord_remove_server_member', { p_server: serverId, p_target: userId })),
+  canServerAction: async(serverId:string,action:'manage_channels'|'manage_members'|'manage_bots'|'send_messages'): Promise<boolean> =>
+    checked(await client.rpc('zuzucord_can_server_action',{p_server:serverId,p_action:action})) === true,
+  getCustomRoles: async(serverId:string): Promise<CustomServerRole[]> =>
+    checked(await client.from('zuzucord_server_roles').select('id,server_id,name,color,position,manage_channels,manage_members,manage_bots')
+      .eq('server_id',serverId).order('position',{ascending:false})) || [],
+  getRoleAssignments: async(serverId:string): Promise<CustomRoleAssignment[]> =>
+    checked(await client.from('zuzucord_member_custom_roles').select('user_id,role_id,server_id')
+      .eq('server_id',serverId)) || [],
+  saveServerRole: async(serverId:string, roleId:string|null, name:string,color:string,
+    permissions:{manage_channels:boolean;manage_members:boolean;manage_bots:boolean}):Promise<string> =>
+    checked(await client.rpc('zuzucord_save_server_role',{
+      p_server:serverId,p_role:roleId,p_name:name,p_color:color,
+      p_manage_channels:permissions.manage_channels,
+      p_manage_members:permissions.manage_members,p_manage_bots:permissions.manage_bots
+    })),
+  assignServerRole: async(serverId:string,userId:string,roleId:string,grant:boolean):Promise<void> => {
+    checked(await client.rpc('zuzucord_assign_server_role',{
+      p_server:serverId,p_target:userId,p_role:roleId,p_grant:grant
+    }));
+  },
+  deleteServerRole: async(serverId:string,roleId:string):Promise<void> => {
+    checked(await client.rpc('zuzucord_delete_server_role',{p_server:serverId,p_role:roleId}));
+  },
+  managePlatformRole: async(target:string,role:'developer'|'verified'|'beta_tester',enabled:boolean):Promise<void> => {
+    checked(await client.rpc('zuzucord_manage_platform_role',{
+      p_target:target,p_role:role,p_enabled:enabled
+    }));
+  },
   getFriends: async (): Promise<FriendRequest[]> =>
     checked(await client.from('zuzucord_friend_requests').select('id,from_user,to_user,status')
       .order('created_at', { ascending: false })) || [],
