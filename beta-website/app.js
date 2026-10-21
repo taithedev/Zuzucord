@@ -86,6 +86,7 @@
       set('community-banned-today', format(Number(d.banned_today)));
       set('community-messages', format(Number(d.total_messages)));
       set('community-servers', format(Number(d.total_servers)));
+      set('community-boosts', format(Number(d.total_boosts)));
       set('community-updated', 'Source: ZuzuCord Supabase database · Updated ' + new Date().toLocaleString() + ' · Today starts 00:00 UTC. GitHub statistics are separate.');
     } catch {
       set('community-updated', 'Community statistics are temporarily unavailable. No counts are being estimated.');
