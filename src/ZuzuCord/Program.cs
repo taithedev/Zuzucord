@@ -137,7 +137,7 @@ internal sealed class ChatWindow : Form
         var serverRail = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, BackColor = Ui.Background };
         serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
         serverRail.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 102));
+        serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 145));
         serverRail.Controls.Add(new Label {
             Text = "  SERVERS", Dock = DockStyle.Fill, ForeColor = ThemeColors.Muted,
             Font = new Font("Segoe UI Semibold", 11), TextAlign = ContentAlignment.MiddleLeft
@@ -146,12 +146,15 @@ internal sealed class ChatWindow : Form
         var serverActions = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(5) };
         var createServer = Ui.Button("+ Server", 140);
         var joinServer = Ui.Button("Join invite", 140);
+        var membersButton = Ui.Button("Members", 140);
         serverActions.Controls.Add(createServer);
         serverActions.Controls.Add(joinServer);
+        serverActions.Controls.Add(membersButton);
         serverRail.Controls.Add(serverActions, 0, 2);
         shell.Controls.Add(serverRail, 0, 0);
         createServer.Click += async (_, _) => await CreateServer();
         joinServer.Click += async (_, _) => await JoinServer();
+        membersButton.Click += async (_, _) => await ShowMembers();
         var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, BackColor = Ui.Side };
         sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -337,7 +340,7 @@ internal sealed class ChatWindow : Form
         rooms.Items.Clear();
         var index = servers.SelectedIndex - 1;
         selectedServer = index < 0 || index >= serverItems.Count ? null : serverItems[index].Id;
-        createChannel.Enabled = selectedServer.HasValue;
+        createChannel.Enabled = false;
         invite.Enabled = index >= 0 && index < serverItems.Count
             && serverItems[index].OwnerId == api.Current?.UserId;
         if (selectedServer is Guid serverId)
@@ -349,7 +352,11 @@ internal sealed class ChatWindow : Form
                 if (selectedServer != serverId) return;
                 channelItems.AddRange(channels);
                 foreach (var channel in channels) rooms.Items.Add("  #  " + channel.Name);
-                status.Text = serverItems[index].Name + " · " + channels.Count + " channels";
+                var memberList = await api.ServerMembersAsync(serverId);
+                if (selectedServer != serverId) return;
+                createChannel.Enabled = memberList.Any(m =>
+                    m.UserId == api.Current?.UserId && m.Role is "owner" or "admin");
+                status.Text = serverItems[index].Name + " · " + memberList.Count + " members · " + channels.Count + " channels";
             }
             catch (Exception error) { Report(error); }
         }
@@ -394,6 +401,19 @@ internal sealed class ChatWindow : Form
         lastRendered = "";
         transcript.Text = "Loading messages…";
         await Refresh();
+    }
+
+    private async Task ShowMembers()
+    {
+        var index = servers.SelectedIndex - 1;
+        if (index < 0 || index >= serverItems.Count)
+        {
+            status.Text = "Select a server to manage members.";
+            return;
+        }
+        using var dialog = new ServerMembersForm(api, serverItems[index]);
+        dialog.ShowDialog(this);
+        await LoadServers();
     }
 
     private async Task CreateServer()
