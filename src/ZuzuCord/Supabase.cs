@@ -50,9 +50,14 @@ internal sealed class Supabase : IDisposable
         if (response.IsSuccessStatusCode) return value;
         try {
             using var json = JsonDocument.Parse(value);
-            if (json.RootElement.TryGetProperty("msg", out var m)) value = m.GetString() ?? value;
-            else if (json.RootElement.TryGetProperty("message", out m)) value = m.GetString() ?? value;
-            else if (json.RootElement.TryGetProperty("error_description", out m)) value = m.GetString() ?? value;
+            if (json.RootElement.TryGetProperty("msg", out var m) && m.ValueKind == JsonValueKind.String)
+                value = m.GetString() ?? value;
+            else if (json.RootElement.TryGetProperty("message", out m) && m.ValueKind == JsonValueKind.String)
+                value = m.GetString() ?? value;
+            else if (json.RootElement.TryGetProperty("error_description", out m) && m.ValueKind == JsonValueKind.String)
+                value = m.GetString() ?? value;
+            else if (json.RootElement.TryGetProperty("error", out m) && m.ValueKind == JsonValueKind.String)
+                value = m.GetString() ?? value;
         } catch { }
         throw new HttpRequestException($"Request failed ({(int)response.StatusCode}): {value[..Math.Min(230, value.Length)]}", null, response.StatusCode);
     }
