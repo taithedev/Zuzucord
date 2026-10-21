@@ -489,6 +489,10 @@ function App() {
       <span className="window-drag" />
       <div className="title-context">{view === 'friends' ? 'Friends' : view === 'dm' ? 'Direct Messages' : currentServer?.name || 'Public Rooms'}</div>
       <span className="window-drag" />
+      <div className="title-release">
+        <button className="release-check" title="Check official v-prefixed GitHub releases" disabled={updating}
+          onClick={()=>void checkUpdates()}><RefreshCw size={13}/>{updateRelease?'Update '+updateRelease.tag:'Updates'}</button>
+      </div>
       <div className="window-controls">
         <IconButton label="Minimize" onClick={() => void window.zuzuDesktop?.windowAction('minimize')}><Minus size={14} /></IconButton>
         <IconButton label="Maximize" onClick={() => void window.zuzuDesktop?.windowAction('maximize')}><Square size={12} /></IconButton>
@@ -516,6 +520,8 @@ function App() {
           <span className="rail-divider" />
           <button title="Public rooms" className={'realm-bubble ' + (view === 'channel' && !selectedServer ? 'selected' : '')}
             onClick={() => serverSelect(null)}><Globe2 size={23} /></button>
+          <button title="Official ZuzuCord announcements" className="realm-bubble official-rail"
+            onClick={() => openModal('announcements')}><ShieldCheck size={22} /></button>
           <div className="rail-space" />
           <IconButton label="Create server" onClick={() => openModal('new-server')}><Plus size={23} /></IconButton>
           <IconButton label="Join server" onClick={() => openModal('join-server')}><ServerIcon size={18} /></IconButton>
@@ -541,6 +547,8 @@ function App() {
           <button className={'sidebar-nav-button ' + (view === 'friends' ? 'selected' : '')}
             onClick={() => { setView('friends'); setSelectedFriend(null); }}><Users size={19} /> Friends {pendingCount > 0 && <b className="count-chip">{pendingCount}</b>}</button>
           <button className="sidebar-nav-button" onClick={() => openModal('add-friend')}><UserPlus size={19} /> Add Friend</button>
+          <button className="sidebar-nav-button official-nav" onClick={() => openModal('announcements')}>
+            <ShieldCheck size={19} /> ZuzuCord Official <span className="official-badge">OFFICIAL</span></button>
           <div className="sidebar-heading"><span>{selectedServer ? currentServer?.name || 'YOUR SERVER' : 'DIRECT MESSAGES'}</span>
             <IconButton label={selectedServer ? 'Create channel' : 'Add friend'}
               onClick={() => openModal(selectedServer ? 'new-channel' : 'add-friend')}><Plus size={15} /></IconButton></div>
@@ -560,7 +568,9 @@ function App() {
           </div>}
           <div className="sidebar-user">
             <Avatar name={username || 'ZuzuCord'} />
-            <div className="user-details"><strong>{username || 'ZuzuCord'}</strong><span>Signed in</span></div>
+            <div className="user-details"><strong>{username || 'ZuzuCord'}</strong>
+              <span>{userRoles.includes('developer')?'Developer':userRoles.includes('verified')?'Verified':
+                beta||userRoles.includes('beta_tester')?'Beta tester':'Member'} · Signed in</span></div>
             <IconButton label="Profile" onClick={() => { setModalValue(profileName); setModalOther(profileStatus); setModal('profile'); }}><Settings2 size={18} /></IconButton>
           </div>
         </section>
@@ -655,6 +665,8 @@ function App() {
               <div className="activity-metric"><strong>{friends.filter(f=>f.status==='accepted').length}</strong><span>Accepted friends</span></div>
               <div className="activity-metric"><strong>{pendingCount}</strong><span>Incoming requests</span></div>
               <div className="activity-metric"><strong>{onlineIds.size}</strong><span>Online friends</span></div>
+              <button className="plain-activity-link" onClick={()=>openModal('announcements')}>
+                <ShieldCheck size={15}/> Official announcements <ChevronRight size={14}/></button>
             </div>
             <div className="activity-box"><h3><UsersRound size={17}/> Active friends <span>{onlineIds.size}</span></h3>
               {friends.filter(f => onlineIds.has(f.id) && f.status === 'accepted').slice(0,5).map(f =>
@@ -678,6 +690,12 @@ function App() {
               {isOwner && <button className="plain-activity-link" onClick={() => openModal('bot')}>Bot settings <ChevronRight size={14}/></button>}
               <button className="plain-activity-link" onClick={() => openModal('invite')}>Invite to server <ChevronRight size={14}/></button>
               {canCreateChannel && <button className="plain-activity-link" onClick={() => openModal('new-channel')}>Create text channel <ChevronRight size={14}/></button>}
+              {isOwner && <button className="plain-activity-link" onClick={() => openModal('install-bot')}>Manage community bots <ChevronRight size={14}/></button>}
+            </div>}
+            {selectedServer && <div className="activity-box">
+              <h3><Sparkles size={17}/> Server boosts <span>Level {boostLevel}/3</span></h3>
+              <p className="tiny muted">Channel capacity: {30+10*boostLevel}. Your credits: {walletCredits}.</p>
+              <button className="plain-activity-link" onClick={() => openModal('boost')}>Server boost benefits <ChevronRight size={14}/></button>
             </div>}
           </> : <div className="activity-box"><h3><MessageCircle size={17}/> Conversation</h3>
             <div className="activity-profile"><Avatar name={currentFriend?.username || 'Friend'} size="large"/><h3>{currentFriend?.username || 'Friend'}</h3><small>Accepted ZuzuCord friend</small></div>
@@ -685,26 +703,59 @@ function App() {
           <div className="activity-note"><LockKeyhole size={16}/> Account and online activity come from ZuzuCord Supabase. Presence is visible only to accepted friends.</div>
         </aside>}
       </main>
+      {updateRelease && <div className="update-banner" role="status">
+        <div><RefreshCw size={17}/> <strong>ZuzuCord {updateRelease.tag} is available</strong>
+        <small>Official GitHub release with a v-prefixed version tag</small></div>
+        <button className="button button-primary" onClick={()=>void downloadUpdate()} disabled={updating}>
+          {updating?'Downloading…':'Download installer'}</button>
+        <IconButton label="Dismiss update" onClick={()=>setUpdateRelease(null)}><X size={16}/></IconButton>
+      </div>}
       {status && <div className="toast" role="status"><span>{status}</span><IconButton label="Dismiss" onClick={()=>setStatus('')}><X size={15}/></IconButton></div>}
       {modal && <Dialog heading={{
         settings:'Appearance & effects', 'new-server':'Create a server','join-server':'Join a server',
         'new-channel':'New text channel','add-friend':'Add a friend',members:'Server members',
-        invite:'Invite people',profile:'Your profile',bot:'ZuzuBot settings'
+        invite:'Invite people',profile:'Your profile',bot:'ZuzuBot settings',
+        announcements:'ZuzuCord Official',boost:'ServerBoostCredits', 'install-bot':'Server bot applications'
       }[modal]} subtitle={modal === 'settings' ? 'Make ZuzuCord yours — colors, glass, gradients and motion.' : undefined}
         onClose={() => setModal(null)} wide={modal === 'settings'}>
-        {modal === 'settings' ? <AppearanceEditor value={appearance} beta={beta}
+        {modal === 'settings' ? <AppearanceEditor value={appearance}
           onSave={async next => { await saveAppearance(next); setModal(null); }}
           onImport={async () => {
-            if (!me || !beta) return null;
+            if (!me) return null;
             try {
               const remote = await appApi.getBeta(me);
-              if (!remote) throw Error('No saved beta theme found.');
+              if (!remote) throw Error('No synced website theme found yet.');
               const next = { ...validateAppearance(remote), compact: appearance.compact };
               setAppearance(next);
-              setStatus('Loaded beta theme from your website account.');
+              setStatus('Imported your production website theme and gradients.');
               return next;
             } catch (error) { showError(error); return null; }
           }} />
+        : modal === 'announcements' ? <div className="modal-body official-inbox">
+          <div className="official-header"><ShieldCheck size={26}/><div><strong>Official ZuzuCord account</strong><span>Verified · Read-only platform announcements</span></div></div>
+          <p className="tiny muted">These developer-published messages appear for every ZuzuCord account. Replies are disabled.</p>
+          {announcements.length===0 ? <p className="muted">No official announcements yet.</p> :
+            announcements.map(item=><article key={item.id} className="announcement-item">
+              <strong>{item.title}</strong><time>{dateTime(item.created_at)}</time><p>{item.content}</p></article>)}
+        </div>
+        : modal === 'boost' ? <div className="modal-body">
+          <div className="credit-summary"><Sparkles size={25}/><div><strong>ServerBoostCredits: {walletCredits}</strong>
+            <small>Developer-issued promotional credits · not purchasable</small></div></div>
+          <p className="muted">Server boosts: {boostLevel}/3. Each level adds 10 text channels, from 30 to a maximum of 60.</p>
+          <button type="button" disabled={boostLevel>=3||walletCredits<1} className="button button-primary" onClick={()=>void boostSelectedServer()}>
+            <Sparkles size={17}/> Spend 1 credit to boost server
+          </button>
+          <p className="tiny muted">Credits are allocated by ZuzuCord developers through the secure developer portal.</p>
+        </div>
+        : modal === 'install-bot' ? <div className="modal-body">
+          <p className="muted">Install developer-created ZuzuCord bots in your server. A bot can only post after its server owner approves installation.</p>
+          {botApps.length===0?<p className="muted">No bot applications are available.</p>:
+            botApps.map(bot=><div key={bot.id} className="bot-app-row">
+              <Bot size={19}/><div><strong>{bot.name}</strong><small>{bot.description||bot.id}</small></div>
+              {installedBots.includes(bot.id)?<span className="installed-mark">Installed</span>:
+                <button className="button button-subtle" onClick={()=>void installSelectedBot(bot.id)}>Install</button>}
+            </div>)}
+        </div>
         : modal === 'members' ? <div className="members-modal">
           {members.map(member => <div className="member-row" key={member.user_id}>
             <Avatar name={member.username} size="tiny"/><div><strong>{member.username}</strong><small>{member.role}</small></div>
