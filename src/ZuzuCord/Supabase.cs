@@ -54,17 +54,51 @@ internal sealed class Supabase : IDisposable
         return new Session(token.GetString()!, refresh, id, email, DateTimeOffset.UtcNow.AddSeconds(expires));
     }
 
-    public async Task SignInAsync(string email, string password)
+    public static string LoginEmail(string usernameOrEmail)
     {
+        var input = usernameOrEmail.Trim().ToLowerInvariant();
+        return input.Contains('@') ? input : System.Text.RegularExpressions.Regex.IsMatch(input, "^[a-z0-9_]{3,24}$")
+            ? input + "@users.zuzucord.invalid"
+            : throw new InvalidOperationException("Enter a valid username (3–24 characters) or email.");
+    }
+
+    public async Task SignInAsync(string usernameOrEmail, string password)
+    {
+        var email = LoginEmail(usernameOrEmail);
         using var response = await http.PostAsJsonAsync("auth/v1/token?grant_type=password", new { email, password });
         session = ParseSession(await GetText(response), email);
+        await EnsureAccountAsync();
+    }
+
+    public async Task RegisterUsernameAsync(string username, string password)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(username, "^[a-z0-9_]{3,24}$"))
+            throw new InvalidOperationException("Username must be 3–24 lowercase letters, numbers or underscores.");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "functions/v1/zuzucord-register");
+        request.Content = JsonContent.Create(new { username, password });
+        using var response = await http.SendAsync(request);
+        await GetText(response);
+    }
+
+    private async Task EnsureAccountAsync()
+    {
+        if (session is null) return;
+        using var request = new HttpRequestMessage(HttpMethod.Post, "rest/v1/zuzucord_accounts?on_conflict=user_id");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", session.AccessToken);
+        request.Headers.TryAddWithoutValidation("Prefer", "resolution=ignore-duplicates,return=minimal");
+        var username = session.Email.EndsWith("@users.zuzucord.invalid", StringComparison.OrdinalIgnoreCase)
+            ? session.Email.Split('@')[0]
+            : "member_" + session.UserId.ToString("N")[..16];
+        request.Content = JsonContent.Create(new { user_id = session.UserId, username });
+        using var response = await http.SendAsync(request);
+        await GetText(response);
     }
 
     public async Task SignUpAsync(string email, string password)
     {
         using var response = await http.PostAsJsonAsync("auth/v1/signup", new { email, password });
         var data = await GetText(response);
-        try { session = ParseSession(data, email); }
+        try { session = ParseSession(data, email); if (session is not null) await EnsureAccountAsync(); }
         catch (InvalidOperationException) { session = null; }
     }
 
