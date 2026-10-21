@@ -15,8 +15,36 @@ ZuzuCord **is not Discord**, does not use Discord user tokens, and is not affili
 - Public channels, messaging, a friends list, friend requests, and direct messages between accepted friends
 - Isolated RLS-protected `zuzucord_` tables and aggregate community stats
 - Website with user-provided brand art, 3D-tilt/channel-switching demo, GitHub downloads, and live account/ban/message totals
-- A `beta-website` branch with experimental styling and feedback links
+- A Vercel-ready `beta-website/` folder on `main` and the earlier experimental `beta-website` branch
 - Automated Windows x64 compilation, artifact verification and public preview ZIP release
+
+## Windows first-run setup and saved login
+
+On first launch ZuzuCord shows a saved setup wizard for OLED Black (default), Graphite or Midnight, plus an opt-in to remember the session. Every launch retains the startup notice.
+
+When Remember Login is enabled, the app saves only the Supabase **refresh token**, encrypted under Windows DPAPI CurrentUser at `%LOCALAPPDATA%\\ZuzuCord\\login.bin`. It never saves passwords as text. Refresh-token rotation updates the encrypted vault. Signing out deletes the saved token. Settings and custom accent are saved locally in `%LOCALAPPDATA%\\ZuzuCord\\settings.json`.
+
+The **Appearance** window provides built-in dark themes, a native accent-color picker, Reset Defaults and optional beta-only synchronization.
+
+## Beta website sync
+
+The separate `beta-website/` folder contains a static site, `vercel.json`, branding, and `sync.html`. To deploy a new Vercel project, set Root Directory to **`beta-website`** and Framework Preset to **Other**. The stable website remains in `website/`.
+
+Only manually approved `zuzucord_beta_testers` may synchronize theme and accent colors between the website and Windows. Eligibility is checked through Supabase Auth and RLS policies on `zuzucord_beta_sync`; **no public signup automatically grants beta access**. Users must opt into syncing in the Windows Appearance screen as well. The app checks for web changes about once a minute. Website sign-in tokens are held only in browser memory.
+
+To approve a username, run in the Supabase project's privileged SQL editor:
+
+```sql
+insert into public.zuzucord_beta_testers (user_id, enabled)
+select user_id, true from public.zuzucord_accounts where username = 'tester_username'
+on conflict (user_id) do update set enabled = excluded.enabled;
+```
+
+Sync is limited to theme and accent. It does **not** sync credentials, chats, media, or arbitrary files.
+
+## Compatibility / Windhawk
+
+The app uses native WinForms windows and standard Windows window chrome; it does not inject or install shell hooks. This is a compatibility-conscious design for Windows 10/11 and Visual Studio's .NET desktop tooling, **not a guarantee that every Windhawk mod is compatible**. Test specific mods with the unsigned preview build before release. Windhawk is separate third-party software.
 
 ## ZuzuCord ID and authentication
 
@@ -46,7 +74,7 @@ After a successful push-triggered Windows build, the workflow publishes an **uns
 
 ## Website and registration
 
-`website/index.html` is the stable source. `beta-website` has a separate beta-only presentation. Its username-only signup form calls the Supabase Edge Function `zuzucord-register`, which creates a confirmed Supabase Auth account using an internal non-deliverable login identifier. Registration is rate limited, stores no plaintext passwords in custom tables, and only creates accounts—not signed-in web sessions.
+`website/index.html` is the stable source. `beta-website/` is a fully separate Vercel-ready folder, while a legacy `beta-website` Git branch also exists. Its username-only signup form calls the Supabase Edge Function `zuzucord-register`, which creates a confirmed Supabase Auth account using an internal non-deliverable login identifier. Registration is rate limited, stores no plaintext passwords in custom tables, and only creates accounts—not signed-in web sessions.
 
 The Windows client accepts either an existing email address or a ZuzuCord username as the login identifier. Username-only accounts **cannot recover their passwords through email**; this is an important limitation. Do not lose the password.
 
@@ -64,6 +92,7 @@ The 3D preview is an **illustrative local demo**; its messages and channel switc
 
 - `src/ZuzuCord/` — native Windows application source
 - `website/` — static download, statistics, signup website
+- `beta-website/` — separately deployable beta download site and tester-only appearance sync
 - `website/assets/` — web-optimized versions of the supplied ZuzuCord icon and banner
 - `.github/workflows/windows-build.yml` — Windows build and preview release
 - `.github/workflows/website-check.yml` — validates stable and beta website branches
