@@ -4,6 +4,23 @@ This is the **new Windows-native desktop interface** using **React 19 + TypeScri
 
 The existing working **C# / Siticone WinForms project remains in `src/ZuzuCord`** during this UI transition. Both clients share the existing `zuzucord_` backend tables and authorization rules, but they are separate executables.
 
+
+## Windows installer: install, repair and uninstall (v0.9)
+
+ZuzuCord's Windows NSIS setup uses an assisted wizard (`oneClick: false`) and a custom include at `build/installer.nsh`. When it recognizes an existing installation's `Uninstall ZuzuCord.exe`, it offers:
+
+- **Yes — Repair/Reinstall:** continue through the installer, replace application files, and preserve local sign-in/preferences.
+- **No — Uninstall:** run the existing standard ZuzuCord uninstaller. The app is also listed in Windows Settings → Apps → Installed apps.
+- **Cancel:** leave the installation unchanged.
+
+If an older installer uses a different installation directory or uninstaller name, its installation may not be auto-detected; uninstall from Windows Settings in that case. Do not use Windows Installer's repair command for the portable ZIP version, which is not an installed application. This is a preview that needs testing on real Windows machines.
+
+## Community roles and ZuzuCord Owner
+
+Server owners can now open **Manage server roles** to create colored custom roles (up to 30 per server), grant **Manage Channels, Manage Members, Manage Bots**, edit roles and assign them to users. Member lists display colored custom-role badges. Native owner/admin/member roles remain, and custom moderation permissions are enforced by Supabase RPCs, not by UI-only checks. Custom moderators cannot remove the server owner or administrators. Per-server role settings are stored in `zuzucord_server_roles` and `zuzucord_member_custom_roles`.
+
+The ZuzuCord platform's verified `taithedev` account also has the **Owner** role. The Owner console can grant/revoke developer, verified and beta-tester status for existing users, but **cannot grant additional platform Owner roles**. Server Owner is a separate permission held by a server's creator.
+
 ## Windows setup
 
 Open this folder in **Visual Studio Code** or **Visual Studio 2026** with Node.js/TypeScript tooling. Install Node.js 22+.
@@ -23,7 +40,7 @@ The packaging script creates a valid 256×256 Windows icon from your existing `w
 
 ## Appearance controls
 
-Open **Themes** or the left palette icon. Customize OLED/Graphite/Midnight, six accent swatches or a color picker, a two-stop radial gradient, glass/glow strength, compact view and animated ambient background. UI changes save in the desktop user profile. **Every registered ZuzuCord user** can sync preferences and preferred server with the separate beta website; production preferences are stored in `zuzucord_user_sync` with per-user RLS; the original beta table remains separate.
+Open **Themes** or the left palette icon. Customize OLED/Graphite/Midnight, six accent swatches or a color picker, a two-stop radial gradient, glass/glow strength, compact view and animated ambient background. UI changes save in the desktop user profile. **Every registered ZuzuCord user** can sync preferences and preferred server with the main production website; production preferences are stored in `zuzucord_user_sync` with per-user RLS; the original beta table remains separate.
 
 Use the Windows system's reduced-motion preference to disable animation.
 
