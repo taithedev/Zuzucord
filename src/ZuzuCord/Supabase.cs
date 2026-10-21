@@ -12,6 +12,7 @@ internal sealed record ChatMessage(
     [property: JsonPropertyName("author_id")] Guid AuthorId,
     string Content,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+internal sealed record UserProfile([property: JsonPropertyName("display_name")] string DisplayName, [property: JsonPropertyName("status_text")] string StatusText);
 internal sealed record Session(string AccessToken, string RefreshToken, Guid UserId, string Email, DateTimeOffset ExpiresAt);
 
 internal sealed class Supabase : IDisposable
@@ -123,11 +124,12 @@ internal sealed class Supabase : IDisposable
         finally { refreshLock.Release(); }
     }
 
-    private async Task<string> Api(HttpMethod method, string path, object? body = null)
+    private async Task<string> Api(HttpMethod method, string path, object? body = null, string? prefer = null)
     {
         await EnsureFresh();
         using var request = new HttpRequestMessage(method, "rest/v1/" + path);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", session!.AccessToken);
+        if(prefer is not null) request.Headers.TryAddWithoutValidation("Prefer", prefer);
         if (body is not null) request.Content = JsonContent.Create(body);
         using var response = await http.SendAsync(request);
         return await GetText(response);
@@ -153,6 +155,25 @@ internal sealed class Supabase : IDisposable
         if (session is null) throw new InvalidOperationException("Sign in first.");
         if (string.IsNullOrWhiteSpace(message) || message.Length > 2000) throw new InvalidOperationException("Messages must contain 1 to 2000 characters.");
         await Api(HttpMethod.Post, "zuzucord_messages", new { room_id = roomId, author_id = session.UserId, content = message.Trim() });
+    }
+
+    public async Task<UserProfile> GetProfileAsync()
+    {
+        if(session is null) throw new InvalidOperationException("Sign in first.");
+        var value = await Api(HttpMethod.Get, "zuzucord_profiles?select=display_name,status_text&user_id=eq." + session.UserId);
+        var items = JsonSerializer.Deserialize<List<UserProfile>>(value, Json);
+        return items is { Count: > 0 } ? items[0] : new UserProfile("", "");
+    }
+
+    public async Task SaveProfileAsync(string displayName, string statusText)
+    {
+        if (session is null) throw new InvalidOperationException("Sign in first.");
+        displayName = displayName.Trim();
+        statusText = statusText.Trim();
+        if(displayName.Length > 40 || statusText.Length > 120) throw new InvalidOperationException("Profile is too long.");
+        await Api(HttpMethod.Post, "zuzucord_profiles?on_conflict=user_id",
+            new { user_id = session.UserId, display_name = displayName, status_text = statusText },
+            "resolution=merge-duplicates,return=minimal");
     }
 
     public void Dispose()
