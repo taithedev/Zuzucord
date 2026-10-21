@@ -125,6 +125,7 @@ function App() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(() => new Set());
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [directMessages, setDirectMessages] = useState<MessageDM[]>([]);
@@ -221,6 +222,22 @@ function App() {
     const poll = window.setInterval(() => { void loadServers(); void loadFriends(); }, 24000);
     return () => { live = false; window.clearInterval(poll); };
   }, [me, loadFriends, loadServers]);
+
+  useEffect(() => {
+    if (!me) return;
+    let active = true;
+    const refreshPresence = async () => {
+      try {
+        await appApi.presenceHeartbeat();
+        const accepted = friends.filter(f => f.status === 'accepted').map(f => f.id);
+        const online = await appApi.onlineFriendIds(accepted);
+        if (active) setOnlineIds(new Set(online));
+      } catch { if (active) setOnlineIds(new Set()); }
+    };
+    void refreshPresence();
+    const timer = window.setInterval(refreshPresence, 45000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [me, friends]);
 
   useEffect(() => {
     if (!me || loadedBeta.current) return;
@@ -379,9 +396,9 @@ function App() {
   const displayedFriends = useMemo(() => friends.filter(friend => {
     if (tab === 'pending' && friend.status !== 'pending') return false;
     if (tab === 'all' && friend.status !== 'accepted') return false;
-    if (tab === 'online') return false; // Presence is not tracked; never invent it.
+    if (tab === 'online' && (friend.status !== 'accepted' || !onlineIds.has(friend.id))) return false;
     return !query || friend.username.toLowerCase().includes(query.toLowerCase());
-  }), [friends, tab, query]);
+  }), [friends, tab, query, onlineIds]);
   const pendingCount = friends.filter(f => f.status === 'pending' && !f.outgoing).length;
   const messageRows = useMemo(() => (view === 'dm' ? directMessages.map(d => ({
     id: d.id, author_id: d.sender_id, content: d.content, created_at: d.created_at,
@@ -507,15 +524,13 @@ function App() {
             <div className="list-search"><Search size={19} /><input placeholder="Search your friends" value={query}
               onChange={e => setQuery(e.target.value)} /></div>
             <div className="list-label">{tab === 'online' ? 'PRESENCE' : tab === 'pending' ? 'PENDING REQUESTS' : 'ALL FRIENDS'} — {displayedFriends.length}</div>
-            {tab === 'online' ? <div className="empty-content"><UsersRound size={43} />
-              <h2>Online status isn't available yet.</h2><p>You can message your friends from the All tab. We're not displaying made-up online activity.</p></div>
-            : displayedFriends.length ? <div className="friend-list">
+            {displayedFriends.length ? <div className="friend-list">
               {displayedFriends.map(friend => <div className="friend-row" key={friend.requestId}>
                 <Avatar name={friend.username} />
                 <div className="friend-row-text"><strong>{friend.username}</strong>
                   <small>{friend.status === 'pending'
                     ? friend.outgoing ? 'Friend request sent' : 'Sent you a friend request'
-                    : 'ZuzuCord friend'}</small></div>
+                    : onlineIds.has(friend.id) ? 'Online now' : 'Offline or inactive'}</small></div>
                 {friend.status === 'pending' && !friend.outgoing ? <>
                   <IconButton label="Accept friend" onClick={() => void friendDecision(friend.requestId,true)}><Check size={20}/></IconButton>
                   <IconButton label="Decline friend" onClick={() => void friendDecision(friend.requestId,false)}><X size={20}/></IconButton>
@@ -523,8 +538,10 @@ function App() {
                   <IconButton label={'Message '+friend.username} onClick={() => { setSelectedFriend(friend.id); setView('dm'); }}><MessageCircle size={19}/></IconButton> : null}
               </div>)}
             </div> : <div className="empty-content"><UsersRound size={43} />
-              <h2>{tab === 'pending' ? 'No pending requests.' : 'Your friends list is ready.'}</h2>
-              <p>{tab === 'pending' ? 'New friend requests will appear here.' : 'Send a friend request by username to start chatting.'}</p>
+              <h2>{tab === 'pending' ? 'No pending requests.' : tab === 'online' ? 'Nobody is online right now.' : 'Your friends list is ready.'}</h2>
+              <p>{tab === 'pending' ? 'New friend requests will appear here.' : tab === 'online'
+                ? 'Friends appear here while their ZuzuCord desktop apps are active.'
+                : 'Send a friend request by username to start chatting.'}</p>
               {tab === 'all' && <button className="button button-primary" onClick={() => openModal('add-friend')}><UserPlus size={17}/> Add a friend</button>}
             </div>}
           </> : <div className="conversation-pane">
@@ -570,6 +587,14 @@ function App() {
             <div className="activity-box"><h3><Heart size={17}/> Connections</h3>
               <div className="activity-metric"><strong>{friends.filter(f=>f.status==='accepted').length}</strong><span>Accepted friends</span></div>
               <div className="activity-metric"><strong>{pendingCount}</strong><span>Incoming requests</span></div>
+              <div className="activity-metric"><strong>{onlineIds.size}</strong><span>Online friends</span></div>
+            </div>
+            <div className="activity-box"><h3><UsersRound size={17}/> Active friends <span>{onlineIds.size}</span></h3>
+              {friends.filter(f => onlineIds.has(f.id) && f.status === 'accepted').slice(0,5).map(f =>
+                <button className="activity-server" key={f.id} onClick={() => { setSelectedFriend(f.id);setView('dm'); }}>
+                  <Avatar name={f.username} size="tiny"/><span>{f.username}</span><span className="presence-dot"/>
+                </button>)}
+              {onlineIds.size === 0 && <p className="tiny muted">No accepted friends are active right now.</p>}
             </div>
           </> : view === 'channel' ? <>
             <div className="activity-box"><h3><UsersRound size={17}/> Members <span>{members.length}</span></h3>
@@ -590,7 +615,7 @@ function App() {
           </> : <div className="activity-box"><h3><MessageCircle size={17}/> Conversation</h3>
             <div className="activity-profile"><Avatar name={currentFriend?.username || 'Friend'} size="large"/><h3>{currentFriend?.username || 'Friend'}</h3><small>Accepted ZuzuCord friend</small></div>
           </div>}
-          <div className="activity-note"><LockKeyhole size={16}/> Real ZuzuCord data from Supabase. No simulated users or activity.</div>
+          <div className="activity-note"><LockKeyhole size={16}/> Account and online activity come from ZuzuCord Supabase. Presence is visible only to accepted friends.</div>
         </aside>}
       </main>
       {status && <div className="toast" role="status"><span>{status}</span><IconButton label="Dismiss" onClick={()=>setStatus('')}><X size={15}/></IconButton></div>}
