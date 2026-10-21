@@ -1,7 +1,7 @@
 {
   "name": "zuzucord-desktop",
   "productName": "ZuzuCord",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "ZuzuCord React desktop client for Windows",
   "private": true,
   "main": "electron/main.cjs",
