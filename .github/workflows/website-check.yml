@@ -4,10 +4,12 @@ on:
     branches: [main, beta-website]
     paths:
       - 'website/**'
+      - 'beta-website/**'
       - '.github/workflows/website-check.yml'
   pull_request:
     paths:
       - 'website/**'
+      - 'beta-website/**'
       - '.github/workflows/website-check.yml'
   workflow_dispatch:
 permissions:
@@ -21,7 +23,10 @@ jobs:
         with:
           node-version: '22'
       - name: Validate JavaScript syntax
-        run: node --check website/app.js
+        run: |
+          node --check website/app.js
+          node --check beta-website/app.js
+          node --check beta-website/sync.js
       - name: Validate website bundle paths
         run: |
           python3 - <<'PY'
@@ -36,10 +41,18 @@ jobs:
                   for attr in ('src','href'):
                       val=data.get(attr,'')
                       if val.startswith('./'): self.paths.append(val)
-          root=Path('website')
-          parser=Assets()
-          parser.feed((root/'index.html').read_text())
-          missing=[p for p in parser.paths if not (root/p[2:]).exists()]
-          if missing: raise SystemExit('Missing assets: '+str(missing))
-          print('Website assets validated:',len(parser.paths))
+          for root in (Path('website'), Path('beta-website')):
+              files=[root/'index.html', root/'privacy.html', root/'terms.html']
+              if root.name=='beta-website': files.append(root/'sync.html')
+              for document in files:
+                  parser=Assets()
+                  parser.feed(document.read_text())
+                  missing=[p for p in parser.paths if not (root/p[2:]).exists()]
+                  if missing: raise SystemExit('Missing assets in '+str(document)+': '+str(missing))
+                  print(document,'validated',len(parser.paths),'asset references')
+          sync=(Path('beta-website')/'sync.js').read_text()
+          for term in ('zuzucord_is_beta_tester','zuzucord_beta_sync','access_token'):
+              if term not in sync: raise SystemExit('Missing beta auth behavior: '+term)
+          if 'localStorage' in sync or 'sessionStorage' in sync:
+              raise SystemExit('Beta authentication must remain in memory only')
           PY
