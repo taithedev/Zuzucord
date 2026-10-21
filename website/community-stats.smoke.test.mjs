@@ -10,7 +10,7 @@ for (const site of ['website', 'beta-website']) {
     const calls = [];
     let stats = {
       total_users: 17, created_today: 4, banned_users: 2, banned_today: 1,
-      total_messages: 76, total_servers: 5
+      total_messages: 76, total_servers: 5, total_boosts: 3
     };
     const get = id => {
       if (id === 'register-form' || id === 'interactive-preview') return null;
@@ -42,6 +42,7 @@ for (const site of ['website', 'beta-website']) {
     assert.equal(get('community-banned-today').textContent, '1');
     assert.equal(get('community-messages').textContent, '76');
     assert.equal(get('community-servers').textContent, '5');
+    assert.equal(get('community-boosts').textContent, '3');
     assert.match(get('community-updated').textContent, /Supabase database/);
     assert.match(get('updated-at').textContent, /GitHub data unavailable/);
 
