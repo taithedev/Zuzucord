@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  ArrowLeft, Bell, Bot, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Copy,
+  ArrowLeft, Bell, Bot, Gem, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Copy,
   Crown, Ellipsis, Gift, Globe2, Hash, Heart, Home, LockKeyhole, LogOut, Maximize2,
   MessageCircle, MessagesSquare, Minus, Moon, Palette, PanelRightClose, PanelRightOpen,
   Plus, RefreshCw, Search, Send, Server as ServerIcon, Settings2, Shield,
