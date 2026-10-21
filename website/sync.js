@@ -28,7 +28,7 @@
     throw new Error("Enter a valid ZuzuCord ID or existing account email.");
   };
   async function ensureSession() {
-    if (!accessToken || !accountId) throw new Error("Sign in again to access beta sync.");
+    if (!accessToken || !accountId) throw new Error("Sign in again to access website sync.");
     if (Date.now() < accessExpiresAt - 60000) return;
     if (!refreshToken) { signOut(); throw new Error("Session expired. Sign in again."); }
     if (!renewing) renewing = (async () => {
@@ -105,7 +105,7 @@
     $("sync-panel").hidden = true;
     $("login-panel").hidden = false;
     $("signin-form").reset();
-    setStatus("Signed out of the beta website. Your Windows app login was not changed.");
+    setStatus("Signed out of the production website. Your Windows app login was not changed.");
   }
   async function refreshServers(selectId = null) {
     const servers = await request("/rest/v1/zuzucord_servers?select=id,name&order=name.asc",
