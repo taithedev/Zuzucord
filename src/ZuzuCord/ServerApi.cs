@@ -81,10 +81,34 @@ internal sealed partial class Supabase
             new { p_server = serverId, p_target = userId });
     }
 
+    public async Task<bool> BotEnabledAsync(Guid serverId)
+    {
+        var json = await Api(HttpMethod.Get,
+            $"zuzucord_server_bots?select=enabled&server_id=eq.{serverId}");
+        using var data = JsonDocument.Parse(json);
+        var items = data.RootElement;
+        if (items.ValueKind != JsonValueKind.Array || items.GetArrayLength() == 0) return true;
+        return items[0].GetProperty("enabled").GetBoolean();
+    }
+
+    public async Task<bool> SetBotEnabledAsync(Guid serverId, bool enabled)
+    {
+        var json = await Api(HttpMethod.Post, "rpc/zuzucord_set_bot_enabled",
+            new { p_server = serverId, p_enabled = enabled });
+        return JsonSerializer.Deserialize<bool>(json, Json);
+    }
+
+    public async Task<string> RunBotCommandAsync(Guid channelId, string command)
+    {
+        var json = await Api(HttpMethod.Post, "rpc/zuzucord_run_bot_command",
+            new { p_channel = channelId, p_command = command.Trim() });
+        return JsonSerializer.Deserialize<string>(json, Json) ?? "ZuzuBot responded.";
+    }
+
     public async Task<List<ChatMessage>> ServerMessagesAsync(Guid channelId)
     {
         var data = await Api(HttpMethod.Get,
-            $"zuzucord_server_messages?select=id,author_id,content,created_at&channel_id=eq.{channelId}&order=created_at.desc&limit=75");
+            $"zuzucord_server_messages?select=id,author_id,content,created_at,bot_name&channel_id=eq.{channelId}&order=created_at.desc&limit=75");
         var list = JsonSerializer.Deserialize<List<ChatMessage>>(data, Json) ?? [];
         list.Reverse();
         return list;
