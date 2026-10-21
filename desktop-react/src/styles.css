@@ -330,3 +330,5 @@ button.activity-server:hover{color:white}
 .owner-role-form button{margin-top:8px}
 .owner-nav{background:#dfb8660d;color:#f1d5a7}
 @media(max-width:800px){.roles-editor{grid-template-columns:170px 1fr}.role-list{padding:12px 7px}.role-main{padding:12px}}
+
+.member-row .member-custom-role{display:inline-flex;align-self:flex-start;width:max-content;max-width:100%;font-weight:700;font-size:9px;letter-spacing:.2px;padding:3px 8px;border:1px solid;border-radius:999px;background:#ffffff06;overflow-wrap:anywhere}
