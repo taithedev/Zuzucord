@@ -22,12 +22,14 @@ internal sealed class NoticeForm : Form
         layout.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "ZUZUCORD  /  IMPORTANT NOTICE", ForeColor = Color.White,
             Font = new Font("Segoe UI Semibold", 18), TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
         layout.Controls.Add(new Label { Dock = DockStyle.Fill, AutoSize = false, ForeColor = Ui.Secondary, Text =
-            "ZuzuCord V2 is an independent social messaging service, not the official Discord application.\n\n" +
-            "If you separately use third-party Discord clients, Discord may restrict or ban your account under its policies. " +
-            "ZuzuCord cannot control Discord's enforcement decisions.\n\n" +
-            "ZuzuCord's developers are not responsible for third-party enforcement decisions to the extent permitted by law. " +
-            "This statement does not waive your statutory rights or excuse negligence or wrongdoing.\n\n" +
-            "Your ZuzuCord account uses Supabase authentication. Treat your password as private; do not enter Discord tokens." }, 0, 1);
+            "ZUZUCORD ACCOUNT WARNING: Accounts may be suspended or banned for violations of community rules. " +
+            "Users are responsible for their own conduct, and account actions are subject to moderation.\n\n" +
+            "ZuzuCord developers are not responsible for users violating community rules to the extent permitted by law. " +
+            "This notice does not waive any rights you have under applicable law or excuse wrongful account actions.\n\n" +
+            "ZuzuCord V2 is an independent community service, not affiliated with Discord Inc. " +
+            "Discord accounts and moderation decisions are separate from ZuzuCord.\n\n" +
+            "Your ZuzuCord account uses Supabase authentication. Keep your password private. " +
+            "Username-only accounts cannot recover passwords by email." }, 0, 1);
         var checkbox = new CheckBox { Text = "I understand and want to open ZuzuCord V2.", Dock = DockStyle.Fill, ForeColor = Color.White };
         layout.Controls.Add(checkbox, 0, 2);
         var footer = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft };
