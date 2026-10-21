@@ -473,6 +473,7 @@ function App() {
   })) : messages), [view, messages, directMessages]);
   const getAuthorName = (m: ChatMessage): string => {
     if (m.bot_name) return m.bot_name;
+    if (m.external_bot_id) return botApps.find(b=>b.id===m.external_bot_id)?.name || 'ZuzuCord bot';
     if (m.author_id === me) return username || 'You';
     const member = members.find(person => person.user_id === m.author_id);
     const friend = friends.find(person => person.id === m.author_id);
@@ -632,10 +633,10 @@ function App() {
               </div>
               {messageRows.map(message => <div className="chat-message" key={message.id}>
                 <Avatar name={getAuthorName(message)} size="normal"
-                  color={message.bot_name ? '#9275ff' : undefined} />
+                  color={message.bot_name || message.external_bot_id ? '#9275ff' : undefined} />
                 <div className="message-text">
                   <div className="message-meta"><strong>{getAuthorName(message)}</strong>
-                    {message.bot_name && <span className="bot-tag">BOT</span>}
+                    {(message.bot_name || message.external_bot_id) && <span className="bot-tag">BOT</span>}
                     <time>{dateTime(message.created_at)}</time></div>
                   <div className="message-content">{message.content}</div>
                 </div>
