@@ -1,48 +1,59 @@
-# ZuzuCord Native
+# ZuzuCord V2
 
-**ZuzuCord is now a native Windows desktop application written in C# with .NET 8 Windows Forms.** The previous Electron/web-wrapper implementation has been retired.
+ZuzuCord V2 is a community messaging application with a native **C# / .NET 8 Windows client**, a standalone download website, and Supabase-backed account authentication and public chat rooms.
 
-## What works in source
+**This is ZuzuCord's own social app. It is not a Discord client and is not affiliated with Discord Inc.**
 
-- A native Windows startup disclaimer requiring explicit acknowledgment on **every** app launch
-- A native dark-theme interface, with servers, channels, and messages
-- Sign-in using a **Discord bot token** (NOT a Discord user token)
-- Read the servers that the bot belongs to
-- Read text channels accessible to that bot
-- Read recent channel messages (when bot permissions and message content access permit)
-- Send messages **as that bot** to channels where permitted
-- Manual refresh and basic error reporting
+## Directories
 
-**This is a native Discord bot-channel dashboard, not a full replacement Discord user client.** Discord does not offer an officially supported way to recreate all normal user-client features through its bot API. This app has no Discord user login, friend DMs, user voice chat, or unofficial user-token automation. It does not load a website or embed a web browser.
+| Folder | Purpose |
+| --- | --- |
+| `src/ZuzuCord/` | Native Windows Forms desktop client (.NET 8; opens in Visual Studio 2026) |
+| `website/` | Public downloads landing page and real GitHub project statistics |
+| `.github/workflows/windows-build.yml` | Compiles and publishes Windows x64 ZIP artifact |
+| `.github/workflows/website-check.yml` | Tests the static download website |
+| `.github/workflows/website-pages.yml` | Optional manual GitHub Pages deployment |
 
-## Build on Windows
+## Running the Windows app
 
-Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0). In PowerShell:
+Install .NET 8 SDK and open `src/ZuzuCord/ZuzuCord.csproj` in Visual Studio with the .NET desktop development workload. Press F5.
 
-```powershell
-cd ZuzuCord.Native
-dotnet restore
-dotnet run
-```
-
-To create a standalone Windows build:
+Or use PowerShell:
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
+dotnet run --project src/ZuzuCord/ZuzuCord.csproj
 ```
 
-The executable will be at `ZuzuCord.Native/publish/ZuzuCord.exe`.
+Build a portable self-contained Windows package:
 
-## Discord configuration
+```powershell
+dotnet publish src/ZuzuCord/ZuzuCord.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o dist/windows
+```
 
-Create a bot for a server you manage using Discord's official developer portal. Enable the **Message Content Intent** if needed to read message bodies (subject to Discord's requirements). Invite the bot with only the permissions it needs: View Channels, Read Message History, and Send Messages. Enter its bot token in the ZuzuCord connection box. The token is used in memory only and is not saved to disk. Treat bot tokens as secrets.
+Use the **Actions > ZuzuCord V2 Windows Build** workflow to obtain a build artifact once CI passes. Artifacts are not public releases; creating a release with a signed installer is a separate distribution step.
 
-**Do not enter your personal Discord account token.** Do not commit a bot token to GitHub.
+## What works in this native version
 
-## Important risks
+- Startup notice that requires consent on every launch
+- Email/password sign-in and registration via Supabase Auth
+- Public rooms (`general`, `introductions`, `development`)
+- Read recent messages and send messages in authorized rooms
+- Automatic message refresh every 15 seconds
+- Access-token refresh, request errors and a dark Windows UI
+- Secrets are not written to local files; only a **public Supabase publishable key** is shipped in the source
 
-ZuzuCord is an independent third-party project, not affiliated with or approved by Discord Inc. The startup warning discloses potential account restrictions and bans from unsupported clients. It does not waive statutory rights. Use only official bot integration and follow Discord's developer policies.
+All newly created database tables start with `zuzucord_`. The existing `zuzify_` data has not been renamed or deleted.
 
-## Status
+**Limitations:** This is not yet a pixel-perfect copy of the older ZuzifySocials web interface. The Windows client has basic text chat and authentication; it does not yet include calls, file uploads, moderation dashboard, or complete ZuzifySocials feature parity. Visual Studio/CI compilation does not prove that all runtime flows are error-free.
 
-Source created; the executable has **not been compiled or tested on Windows** in this environment. Discord permission scopes and intent settings affect features.
+The separate [ZuzifySocials repository](https://github.com/taithedev/ZuzifySocials) contains an earlier Windows build that bundles the full website UI; keep it for the UI reference and migration work.
+
+## Download website
+
+The `website/` directory is a self-contained static website and can be deployed on Vercel or GitHub Pages. It displays actual GitHub API statistics: stars, release downloads, published releases and latest Windows build status. Its primary download button links to a Windows release asset only when an actual asset is published.
+
+If no release exists, it links to GitHub Actions instead and clearly labels the build as a development artifact.
+
+## Security / policy
+
+Do not commit private credentials, service-role keys, or personal Discord account tokens. A public Supabase publishable key is designed for distribution. Access to chat and user records is enforced by Supabase row-level security. Users are responsible for following the service's rules. See [SECURITY.md](SECURITY.md).
