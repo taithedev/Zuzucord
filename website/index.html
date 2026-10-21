@@ -10,10 +10,12 @@
   <meta property="og:image" content="https://raw.githubusercontent.com/taithedev/Zuzucord/main/website/assets/zuzucord-banner.webp">
   <meta name="application-name" content="ZuzuCord V2">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./beta.css">
   <script src="./app.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
+  <div class="beta-ribbon"><strong>BETA WEBSITE</strong> You are viewing an experimental version of ZuzuCord's website. <a href="https://github.com/taithedev/Zuzucord/issues/new?template=bug_report.md" target="_blank" rel="noreferrer">Report a bug ↗</a></div>
   <header class="topbar">
     <nav class="nav container" aria-label="Primary navigation">
       <a class="brand" href="#home" aria-label="ZuzuCord home"><span class="brandmark" aria-hidden="true"><span></span><span></span></span><span>Zuzu<span class="muted-brand">Cord</span></span><span class="version-tag">V2</span></a>
@@ -25,13 +27,14 @@
   <main id="main">
     <section class="hero container" id="home" aria-labelledby="hero-title">
       <div class="hero-copy"><img src="./assets/zuzucord-banner.webp" class="hero-banner" width="640" height="320" alt="ZuzuCord brand banner in white and grey on black">
-        <div class="eyebrow"><span class="status-dot"></span> ZUZUCORD / COMMUNITY / VERSION 2</div>
+        <div class="eyebrow"><span class="status-dot"></span> ZUZUCORD / WEBSITE BETA / VERSION 2</div>
         <h1 id="hero-title">Your space.<br><span>Your conversations.</span></h1>
-        <p class="hero-lead">A dedicated Windows community client with channels, messaging, and one connected account. Made for the communities you build.</p>
+        <p class="hero-lead">A dedicated Windows community client with channels, messaging, and one connected account. This beta website is for testing the next layout and account registration flow.</p><span class="beta-highlight">EARLY ACCESS WEBSITE</span>
         <div class="hero-actions">
           <a id="main-download" class="button button-light" href="https://github.com/taithedev/Zuzucord/actions/workflows/windows-build.yml"><span aria-hidden="true">▣</span> View Windows builds <span aria-hidden="true">↗</span></a>
           <a class="button button-outline" href="#features">Explore features <span aria-hidden="true">↘</span></a>
         </div>
+        <div class="beta-links"><a href="https://github.com/taithedev/Zuzucord/issues/new?template=feature_request.md" target="_blank" rel="noreferrer">Suggest a feature ↗</a><a href="https://github.com/taithedev/Zuzucord/tree/main/website" target="_blank" rel="noreferrer">Compare stable site ↗</a></div>
         <p class="small-note" id="download-availability" role="status">Official GitHub release downloads appear here when published.</p>
         <div class="hero-details"><span>Windows 10 / 11</span><span class="bullet">•</span><span>64-bit</span><span class="bullet">•</span><span>Built with C# & .NET</span></div>
       </div>
