@@ -66,8 +66,106 @@
     set('updated-at', valid > 0 ? 'Updated ' + new Date().toLocaleString() + ' · GitHub public API' + (valid < 3 ? ' · Some metrics unavailable' : '') : 'GitHub data unavailable. Retry later; API rate limiting may apply.');
     refresh.disabled = false;
   }
+
+  // Community totals come from a deliberately aggregate-only PostgreSQL RPC.
+  // Neither user lists, identifiers nor moderation reasons are exposed here.
+  const SUPABASE_URL = 'https://wfqudstuncdldsvxqveu.supabase.co';
+  const PUBLIC_KEY = 'sb_publishable_LsAzcgmeAp3fBCtdU6eQzw_u5PPJjar';
+  async function loadCommunity() {
+    try {
+      const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/zuzucord_public_stats', {
+        method: 'POST', headers: { 'apikey': PUBLIC_KEY, 'Content-Type':'application/json' }, body: '{}', cache:'no-store'
+      });
+      if(!response.ok) throw new Error('HTTP ' + response.status);
+      const d = await response.json();
+      set('community-users', format(Number(d.total_users)));
+      set('community-today', format(Number(d.created_today)));
+      set('community-banned', format(Number(d.banned_users)));
+      set('community-messages', format(Number(d.total_messages)));
+      set('community-updated', 'Live ZuzuCord totals · Updated ' + new Date().toLocaleString() + ' · Today starts at 00:00 UTC');
+    } catch {
+      set('community-updated', 'Community statistics are temporarily unavailable. No counts are being estimated.');
+    }
+  }
+
+  function setupRegistration() {
+    const form = $('register-form');
+    const feedback = $('reg-result');
+    if (!form || !feedback) return;
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const username = $('reg-username').value.trim().toLowerCase();
+      const password = $('reg-password').value;
+      const confirm = $('reg-confirm').value;
+      const btn = $('reg-submit');
+      feedback.className = 'form-result';
+      if(!/^[a-z0-9_]{3,24}$/.test(username)) {
+        feedback.textContent = 'Use 3–24 letters, numbers, or underscores.'; feedback.classList.add('error'); return;
+      }
+      if(password !== confirm) { feedback.textContent='Passwords do not match.'; feedback.classList.add('error'); return; }
+      if(password.length < 10) { feedback.textContent='Use at least 10 characters.'; feedback.classList.add('error'); return; }
+      if(!$('reg-terms').checked) { feedback.textContent='Please read and accept the account notice.'; feedback.classList.add('error'); return; }
+      btn.disabled = true; feedback.textContent = 'Creating account securely…';
+      try {
+        const response = await fetch(SUPABASE_URL + '/functions/v1/zuzucord-register', {
+          method: 'POST',
+          headers: { 'apikey': PUBLIC_KEY, 'Content-Type':'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await response.json();
+        if(!response.ok || !data.success) throw new Error(data.error || 'Registration unavailable.');
+        feedback.textContent = 'Account created! You can now sign in to the Windows app using @' + username + ' and your password.';
+        feedback.classList.add('ok');
+        form.reset();
+        loadCommunity();
+      } catch (error) {
+        feedback.textContent = error instanceof Error ? error.message : 'Could not create your account.';
+        feedback.classList.add('error');
+      } finally { btn.disabled=false; }
+    });
+  }
+
+  function setupDemo() {
+    const wrap = $('interactive-preview');
+    const win = wrap?.querySelector('.preview-window');
+    if(!wrap || !win) return;
+    const demo = {
+      general: ['Welcome to your space.', 'Public channels bring your community together.'],
+      introductions: ['Meet the community.', 'A place to introduce yourself and say hello.'],
+      development: ['Share what you build.', 'Talk projects, coding, and new ideas.']
+    };
+    for(const btn of wrap.querySelectorAll('[data-demo-channel]')) {
+      btn.addEventListener('click', () => {
+        wrap.querySelectorAll('[data-demo-channel]').forEach(b=>b.classList.toggle('active', b===btn));
+        const key = btn.dataset.demoChannel;
+        const parts=demo[key];
+        if(!parts) return;
+        $('demo-channel-title').textContent='# ' + key;
+        $('demo-heading').textContent=parts[0];
+        $('demo-description').textContent=parts[1];
+        $('demo-compose').firstChild.textContent='Message #' + key + ' ';
+      });
+    }
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(pointer: coarse)').matches) return;
+    let frame=0;
+    wrap.addEventListener('pointermove',e=>{
+      const r=wrap.getBoundingClientRect();
+      const x=(e.clientX-r.left)/r.width-.5, y=(e.clientY-r.top)/r.height-.5;
+      if(frame) cancelAnimationFrame(frame);
+      frame=requestAnimationFrame(()=>{
+        win.style.setProperty('--tilt-x',(-y*8).toFixed(2)+'deg');
+        win.style.setProperty('--tilt-y',(x*10).toFixed(2)+'deg');
+      });
+    });
+    wrap.addEventListener('pointerleave',()=>{
+      if(frame) cancelAnimationFrame(frame);
+      win.style.removeProperty('--tilt-x');
+      win.style.removeProperty('--tilt-y');
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     $('refresh-stats').addEventListener('click', load);
-    load();
+    load(); loadCommunity(); setupRegistration(); setupDemo();
   });
 })();
