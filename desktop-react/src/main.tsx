@@ -817,8 +817,8 @@ function App() {
   </div>;
 }
 
-function AppearanceEditor({ value, beta, onSave, onImport }: {
-  value: Appearance; beta: boolean; onSave: (next: Appearance) => Promise<void>;
+function AppearanceEditor({ value, onSave, onImport }: {
+  value: Appearance; onSave: (next: Appearance) => Promise<void>;
   onImport: () => Promise<Appearance | null>
 }) {
   const [p, setP] = useState(value);
@@ -853,8 +853,8 @@ function AppearanceEditor({ value, beta, onSave, onImport }: {
         <input type="checkbox" checked={p.motion_enabled} onChange={e=>change('motion_enabled',e.target.checked)}/></div>
       <div className="setting-line"><div><strong>Compact mode</strong><small>Show more channels and conversations.</small></div>
         <input type="checkbox" checked={p.compact} onChange={e=>change('compact',e.target.checked)}/></div>
-      <div className="setting-line"><div><strong>Beta website synchronization</strong><small>{beta?'Sync appearance with your approved beta account.':'Only approved beta testers can enable this.'}</small></div>
-        <input type="checkbox" disabled={!beta} checked={beta&&p.sync_enabled}
+      <div className="setting-line"><div><strong>Production website synchronization</strong><small>Available to every ZuzuCord account. Sync colors, motion and your selected server.</small></div>
+        <input type="checkbox" checked={p.sync_enabled}
           onChange={e=>change('sync_enabled',e.target.checked)}/></div>
     </div>
     <div className="appearance-preview-wrap">
@@ -865,10 +865,10 @@ function AppearanceEditor({ value, beta, onSave, onImport }: {
         <div className="preview-main"><b># general</b><div className="preview-bubble">Welcome to ZuzuCord</div>
           <div className="preview-bubble muted-bubble">Your desktop. Your colors.</div><div className="preview-input">Message #general</div></div>
       </div>
-      <p className="tiny muted">Themes are stored on this computer. Beta sync requires server-side approval.</p>
-      {beta && <button className="button button-subtle"
+      <p className="tiny muted">Themes are stored on your computer. Enable website sync to share your preferences securely across devices.</p>
+      <button className="button button-subtle"
         onClick={async()=>{ const remote=await onImport(); if(remote) setP(remote); }}>
-        <RefreshCw size={16}/> Import beta website theme</button>}
+        <RefreshCw size={16}/> Import production website theme</button>
       <button className="button button-subtle" onClick={()=>setP({...DEFAULT_APPEARANCE,sync_enabled:false})}>Restore defaults</button>
       <button className="button button-primary full" disabled={busy} onClick={async()=>{setBusy(true); try{await onSave(p);}finally{setBusy(false);}}}>
         <Check size={17}/> Apply & save appearance</button>
