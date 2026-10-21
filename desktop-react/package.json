@@ -1,7 +1,7 @@
 {
   "name": "zuzucord-desktop",
   "productName": "ZuzuCord",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "ZuzuCord React desktop client for Windows",
   "private": true,
   "main": "electron/main.cjs",
@@ -54,7 +54,11 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "include": "build/installer.nsh",
+      "uninstallDisplayName": "ZuzuCord",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
     }
   }
 }
