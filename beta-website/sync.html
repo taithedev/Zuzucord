@@ -43,10 +43,14 @@
 <select id="theme-choice"><option value="oled">OLED Black (default)</option><option value="graphite">Graphite</option><option value="midnight">Midnight</option></select>
 <label for="accent-choice">Accent color</label>
 <div class="color-picker-row"><input id="accent-choice" type="color" value="#c9c9d2"><span id="accent-value">#c9c9d2</span><button type="button" id="reset-choice">Defaults</button></div>
-<label class="checkbox-line"><input type="checkbox" id="sync-toggle"> Enable app/website theme syncing</label>
+<label for="active-server">Start in this server on Windows</label>
+<select id="active-server"><option value="">Public rooms (no server)</option></select>
+<p class="helper">Only servers you belong to appear here. Your selected server is saved with the theme.</p>
+<label class="checkbox-line"><input type="checkbox" id="sync-toggle"> Enable app/website appearance and server syncing</label>
 <button class="button button-light" id="sync-save" type="button">Save beta preferences ↗</button>
+<button class="signout-link" id="sync-reload" type="button">Reload saved settings</button>
 <button class="signout-link" id="sync-signout" type="button">Sign out of website</button>
-<p class="helper">Open Appearance in the Windows app and enable beta sync there too. The app checks for theme changes about once per minute while running.</p>
+<p class="helper">Open Appearance in the Windows app and enable beta sync there too. The app checks for changes about once per minute while running. Synchronization is limited to appearance and server selection, not passwords or messages.</p>
 </div>
 <p id="sync-status" class="sync-status" role="status" aria-live="polite">Sign in to check beta eligibility.</p>
 </section>
