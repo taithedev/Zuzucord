@@ -11,6 +11,11 @@ internal sealed record ServerChannel(
     Guid Id, [property: JsonPropertyName("server_id")] Guid ServerId,
     string Name, string Description);
 
+internal sealed record ServerMember(
+    [property: JsonPropertyName("user_id")] Guid UserId,
+    string Username, string Role,
+    [property: JsonPropertyName("joined_at")] DateTimeOffset JoinedAt);
+
 internal sealed partial class Supabase
 {
     public async Task<List<ZuzuServer>> ServersAsync()
@@ -53,6 +58,27 @@ internal sealed partial class Supabase
         var data = await Api(HttpMethod.Post, "rpc/zuzucord_server_invite",
             new { p_server = serverId });
         return JsonSerializer.Deserialize<string?>(data, Json);
+    }
+
+    public async Task<List<ServerMember>> ServerMembersAsync(Guid serverId)
+    {
+        var data = await Api(HttpMethod.Post, "rpc/zuzucord_list_server_members",
+            new { p_server = serverId });
+        return JsonSerializer.Deserialize<List<ServerMember>>(data, Json) ?? [];
+    }
+
+    public async Task ChangeServerRoleAsync(Guid serverId, Guid userId, string role)
+    {
+        if (role != "admin" && role != "member")
+            throw new InvalidOperationException("Role must be admin or member.");
+        await Api(HttpMethod.Post, "rpc/zuzucord_change_member_role",
+            new { p_server = serverId, p_target = userId, p_role = role });
+    }
+
+    public async Task RemoveServerMemberAsync(Guid serverId, Guid userId)
+    {
+        await Api(HttpMethod.Post, "rpc/zuzucord_remove_server_member",
+            new { p_server = serverId, p_target = userId });
     }
 
     public async Task<List<ChatMessage>> ServerMessagesAsync(Guid channelId)
