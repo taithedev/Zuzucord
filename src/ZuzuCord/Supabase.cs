@@ -12,6 +12,16 @@ internal sealed record ChatMessage(
     [property: JsonPropertyName("author_id")] Guid AuthorId,
     string Content,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+internal sealed record FriendRequest(Guid Id,
+    [property: JsonPropertyName("from_user")] Guid FromUser,
+    [property: JsonPropertyName("to_user")] Guid ToUser, string Status);
+internal sealed record DirectoryResult(
+    [property: JsonPropertyName("user_id")] Guid UserId, string Username);
+internal sealed record DirectMessage(Guid Id,
+    [property: JsonPropertyName("sender_id")] Guid SenderId,
+    [property: JsonPropertyName("recipient_id")] Guid RecipientId,
+    string Content,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
 internal sealed record UserProfile([property: JsonPropertyName("display_name")] string DisplayName, [property: JsonPropertyName("status_text")] string StatusText);
 internal sealed record Session(string AccessToken, string RefreshToken, Guid UserId, string Email, DateTimeOffset ExpiresAt);
 
@@ -174,6 +184,66 @@ internal sealed class Supabase : IDisposable
         await Api(HttpMethod.Post, "zuzucord_profiles?on_conflict=user_id",
             new { user_id = session.UserId, display_name = displayName, status_text = statusText },
             "resolution=merge-duplicates,return=minimal");
+    }
+
+    public async Task<DirectoryResult?> FindUsernameAsync(string username)
+    {
+        var data = await Api(HttpMethod.Post, "rpc/zuzucord_find_username", new { p_username = username.ToLowerInvariant().Trim() });
+        return JsonSerializer.Deserialize<List<DirectoryResult>>(data, Json)?.FirstOrDefault();
+    }
+
+    public async Task<string> FriendUsernameAsync(Guid id)
+    {
+        var data = await Api(HttpMethod.Post, "rpc/zuzucord_friend_username", new { p_target = id });
+        return JsonSerializer.Deserialize<string?>(data, Json) ?? id.ToString("N")[..8];
+    }
+
+    public async Task<List<FriendRequest>> FriendsAsync()
+    {
+        if (session is null) throw new InvalidOperationException("Sign in first.");
+        var data = await Api(HttpMethod.Get,
+            "zuzucord_friend_requests?select=id,from_user,to_user,status&or=(from_user.eq." + session.UserId +
+            ",to_user.eq." + session.UserId + ")&order=created_at.desc");
+        return JsonSerializer.Deserialize<List<FriendRequest>>(data, Json) ?? [];
+    }
+
+    public async Task SendFriendRequestAsync(string username)
+    {
+        var found = await FindUsernameAsync(username);
+        if(found is null) throw new InvalidOperationException("No matching ZuzuCord username was found.");
+        if (session is null || found.UserId == session.UserId) throw new InvalidOperationException("You cannot friend yourself.");
+        await Api(HttpMethod.Post,"zuzucord_friend_requests",
+            new { from_user=session.UserId,to_user=found.UserId,status="pending" });
+    }
+
+    public async Task RespondFriendAsync(Guid requestId, bool accept)
+    {
+        if(session is null) throw new InvalidOperationException("Sign in first.");
+        await Api(new HttpMethod("PATCH"),
+            "zuzucord_friend_requests?id=eq." + requestId + "&to_user=eq." + session.UserId + "&status=eq.pending",
+            new { status=accept ? "accepted" : "declined" }, "return=minimal");
+    }
+
+    public async Task<List<DirectMessage>> DirectMessagesAsync(Guid friendId)
+    {
+        if(session is null) throw new InvalidOperationException("Sign in first.");
+        var me=session.UserId;
+        var path="zuzucord_direct_messages?select=id,sender_id,recipient_id,content,created_at&or=(and(sender_id.eq." +
+            me + ",recipient_id.eq." + friendId + "),and(sender_id.eq." + friendId +
+            ",recipient_id.eq." + me + "))&order=created_at.desc&limit=80";
+        var data=await Api(HttpMethod.Get,path);
+        var messages=JsonSerializer.Deserialize<List<DirectMessage>>(data,Json) ?? [];
+        messages.Reverse();
+        return messages;
+    }
+
+    public async Task SendDirectMessageAsync(Guid friendId, string content)
+    {
+        if(session is null) throw new InvalidOperationException("Sign in first.");
+        if(string.IsNullOrWhiteSpace(content) || content.Length>2000)
+            throw new InvalidOperationException("Messages must be 1 to 2000 characters.");
+        await Api(HttpMethod.Post,"zuzucord_direct_messages",
+            new {sender_id=session.UserId,recipient_id=friendId,content=content.Trim()});
     }
 
     public void Dispose()
