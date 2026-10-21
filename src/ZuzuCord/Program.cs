@@ -61,7 +61,8 @@ internal sealed class ChatWindow : Form
     private readonly UserSettings settings;
     private int updateTicks;
     private readonly ListBox rooms = new() { Dock = DockStyle.Fill, BackColor = Ui.Side, ForeColor = Color.White,
-        BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 11), IntegralHeight = false };
+        BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 11),
+        DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 40, IntegralHeight = false };
     private readonly RichTextBox transcript = new() { Dock = DockStyle.Fill, ReadOnly = true, BackColor = Ui.Background,
         ForeColor = Color.FromArgb(225, 225, 232), BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 11) };
     private readonly TextBox compose = Ui.Input("Message this channel…");
@@ -71,6 +72,7 @@ internal sealed class ChatWindow : Form
     private readonly Button send = Ui.Button("Send", 90);
     private readonly TextBox search = Ui.Input("Search recent messages...");
     private readonly List<ChatMessage> cachedMessages = [];
+    private string lastRendered = "";
     private readonly Label account = new() { Dock=DockStyle.Fill, ForeColor=Ui.Secondary, TextAlign=ContentAlignment.MiddleLeft };
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 15000 };
     private readonly List<Room> roomItems = [];
@@ -153,6 +155,22 @@ internal sealed class ChatWindow : Form
         shell.Controls.Add(right, 1, 0);
         Controls.Add(shell); Controls.Add(header); Controls.Add(SiticoneShell.Accent());
 
+        rooms.DrawItem += (_, e) =>
+        {
+            if (e.Index < 0 || e.Index >= rooms.Items.Count) return;
+            bool active = (e.State & DrawItemState.Selected) != 0;
+            using var brush = new SolidBrush(active ? ThemeColors.Panel : ThemeColors.Side);
+            e.Graphics.FillRectangle(brush, e.Bounds);
+            if (active)
+            {
+                using var accent = new SolidBrush(ThemeColors.Accent);
+                e.Graphics.FillRectangle(accent, e.Bounds.X + 2, e.Bounds.Y + 6, 3, e.Bounds.Height - 12);
+            }
+            var bounds = new Rectangle(e.Bounds.X + 14, e.Bounds.Y, Math.Max(1, e.Bounds.Width - 20), e.Bounds.Height);
+            TextRenderer.DrawText(e.Graphics, rooms.Items[e.Index]?.ToString() ?? "", rooms.Font,
+                bounds, active ? Color.White : ThemeColors.Muted,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+        };
         rooms.SelectedIndexChanged += async (_, _) => await SelectRoom();
         send.Click += async (_, _) => await Send();
         compose.KeyDown += async (_, e) => { if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; await Send(); } };
@@ -233,6 +251,7 @@ internal sealed class ChatWindow : Form
         selectedRoom = roomItems[index].Id;
         channelName.Text = "  #  " + roomItems[index].Name + "     " + roomItems[index].Description;
         cachedMessages.Clear();
+        lastRendered = "";
         transcript.Text = "Loading messages…";
         await Refresh();
     }
@@ -268,8 +287,30 @@ internal sealed class ChatWindow : Form
             sb.AppendLine(entry.Content); sb.AppendLine();
         }
         var next = sb.Length > 0 ? sb.ToString() : needle.Length > 0 ? "No recent messages match your search." : "No messages yet. Start the conversation.";
-        if (transcript.Text == next) return;
-        transcript.Text = next;
+        if (next == lastRendered) return;
+        lastRendered = next;
+        transcript.Clear();
+        if (sb.Length == 0)
+        {
+            transcript.Text = next;
+            return;
+        }
+        using var emphasis = new Font(transcript.Font, FontStyle.Bold);
+        foreach (var entry in cachedMessages)
+        {
+            var author = entry.AuthorId == api.Current?.UserId ? "You" : $"Member {entry.AuthorId.ToString("N")[..7]}";
+            if (needle.Length > 0 && !entry.Content.Contains(needle, StringComparison.OrdinalIgnoreCase) &&
+                !author.Contains(needle, StringComparison.OrdinalIgnoreCase)) continue;
+            transcript.SelectionStart = transcript.TextLength;
+            transcript.SelectionFont = emphasis;
+            transcript.SelectionColor = ThemeColors.Accent;
+            transcript.AppendText(author);
+            transcript.SelectionFont = transcript.Font;
+            transcript.SelectionColor = ThemeColors.Muted;
+            transcript.AppendText($"   {entry.CreatedAt.ToLocalTime():MMM d, HH:mm}\n");
+            transcript.SelectionColor = Color.FromArgb(233, 233, 239);
+            transcript.AppendText(entry.Content + "\n\n");
+        }
         transcript.SelectionStart = transcript.TextLength;
         transcript.ScrollToCaret();
     }
