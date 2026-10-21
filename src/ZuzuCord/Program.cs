@@ -9,32 +9,48 @@ internal static class Program
     [STAThread] private static void Main()
     {
         ApplicationConfiguration.Initialize();
+        var settings = UserSettings.Load();
+        ThemeColors.Configure(settings.Theme, settings.Accent);
         using var notice = new NoticeForm();
         if (notice.ShowDialog() != DialogResult.OK) return;
+        if (!settings.SetupCompleted)
+        {
+            using var setup = new SetupForm(settings);
+            if (setup.ShowDialog() != DialogResult.OK) return;
+        }
         using var api = new Supabase();
-        using var login = new LoginForm(api);
+        api.RefreshTokenChanged += token =>
+        {
+            if (settings.RememberLogin)
+            {
+                try { LoginVault.Save(token); }
+                catch { /* Login still works for this session without persistent storage. */ }
+            }
+            else LoginVault.Clear();
+        };
+        using var login = new LoginForm(api, settings);
         if (login.ShowDialog() != DialogResult.OK) return;
-        Application.Run(new ChatWindow(api));
+        Application.Run(new ChatWindow(api, settings));
     }
 }
 
 internal static class Ui
 {
-    public static readonly Color Background = Color.FromArgb(0, 0, 0);
-    public static readonly Color Panel = Color.FromArgb(13, 13, 15);
-    public static readonly Color Side = Color.FromArgb(9, 9, 11);
-    public static readonly Color Secondary = Color.FromArgb(173, 173, 181);
+    public static Color Background => ThemeColors.Background;
+    public static Color Panel => ThemeColors.Panel;
+    public static Color Side => ThemeColors.Side;
+    public static Color Secondary => ThemeColors.Muted;
     public static readonly Font Font = new("Segoe UI", 10);
     public static Button Button(string text, int width) => new ZuzuButton()
     {
-        Text = text, Width = width, Height = 38, BackColor = Color.FromArgb(32, 32, 38),
+        Text = text, Width = width, Height = 38, BackColor = ThemeColors.Panel,
         ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Margin = new Padding(4),
         Font = Font
     };
     public static TextBox Input(string placeholder) => new()
     {
         PlaceholderText = placeholder, Dock = DockStyle.Fill, Margin = new Padding(5),
-        BackColor = Color.FromArgb(22, 22, 26), ForeColor = Color.White,
+        BackColor = ThemeColors.Input, ForeColor = Color.White,
         BorderStyle = BorderStyle.FixedSingle, Font = Font
     };
 }
@@ -42,6 +58,8 @@ internal static class Ui
 internal sealed class ChatWindow : Form
 {
     private readonly Supabase api;
+    private readonly UserSettings settings;
+    private int updateTicks;
     private readonly ListBox rooms = new() { Dock = DockStyle.Fill, BackColor = Ui.Side, ForeColor = Color.White,
         BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 11), IntegralHeight = false };
     private readonly RichTextBox transcript = new() { Dock = DockStyle.Fill, ReadOnly = true, BackColor = Ui.Background,
@@ -60,31 +78,40 @@ internal sealed class ChatWindow : Form
     private Guid? selectedRoom;
     private readonly SemaphoreSlim refreshGate = new(1, 1);
 
-    public ChatWindow(Supabase client)
+    public ChatWindow(Supabase client, UserSettings preferences)
     {
         api = client;
-        Text = "ZuzuCord V2 — Desktop"; Size = new Size(1270, 800); MinimumSize = new Size(850, 550);
+        settings = preferences;
+        Text = "ZuzuCord V2 — Desktop"; Size = new Size(settings.WindowWidth, settings.WindowHeight); MinimumSize = new Size(850, 550);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Ui.Background; ForeColor = Color.White; Font = Ui.Font;
 
-        var header = new TableLayoutPanel { Dock = DockStyle.Top, Height = 66, ColumnCount = 5,
+        var header = new TableLayoutPanel { Dock = DockStyle.Top, Height = 66, ColumnCount = 6,
             BackColor = Ui.Panel, Padding = new Padding(17, 10, 17, 8) };
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 205));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 175));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
         header.Controls.Add(new Label { Text = "ZuzuCord  /  V2", Dock = DockStyle.Fill,
             Font = new Font("Segoe UI Semibold", 16), ForeColor = Color.White, TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
         header.Controls.Add(status, 1, 0);
-        var reload = SiticoneShell.Action("Refresh", 125);
+        var reload = SiticoneShell.Action("Refresh", 118);
         header.Controls.Add(reload, 2, 0);
-        var profile = SiticoneShell.Action("My profile", 135);
+        var profile = SiticoneShell.Action("My profile", 120);
         header.Controls.Add(profile, 3, 0);
         profile.Click += (_, _) => { using var dialog = new ProfileForm(api); dialog.ShowDialog(this); };
-        var friendsButton = SiticoneShell.Action("Friends / DMs", 138);
+        var friendsButton = SiticoneShell.Action("Friends / DMs", 125);
         header.Controls.Add(friendsButton, 4, 0);
         friendsButton.Click += (_, _) => { using var friendsDialog = new FriendsForm(api); friendsDialog.ShowDialog(this); };
+        var appearance = SiticoneShell.Action("Appearance", 125);
+        header.Controls.Add(appearance, 5, 0);
+        appearance.Click += (_, _) =>
+        {
+            using var editorWindow = new AppearanceForm(api, settings);
+            editorWindow.ShowDialog(this);
+        };
 
         var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2 };
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 252));
@@ -134,13 +161,54 @@ internal sealed class ChatWindow : Form
         KeyPreview = true;
         KeyDown += (_,e)=> { if(e.Control && e.KeyCode==Keys.F){e.SuppressKeyPress=true;search.Focus();} };
         search.AccessibleName = "Search messages loaded in the current channel";
-        timer.Tick += async (_, _) => await Refresh();
-        Shown += async (_, _) => { await LoadRooms(); timer.Start(); };
-        FormClosed += (_, _) => { timer.Stop(); timer.Dispose(); refreshGate.Dispose(); };
+        timer.Tick += async (_, _) =>
+        {
+            await Refresh();
+            if (++updateTicks % 4 == 0) await TryPullBetaThemeAsync();
+        };
+        Shown += async (_, _) =>
+        {
+            await LoadRooms();
+            await TryPullBetaThemeAsync();
+            timer.Start();
+        };
+        FormClosed += (_, _) =>
+        {
+            timer.Stop();
+            timer.Dispose();
+            if (WindowState == FormWindowState.Normal)
+            {
+                settings.WindowWidth = Width;
+                settings.WindowHeight = Height;
+                try { settings.Save(); } catch { }
+            }
+        };
         status.Text = "ZUZUCORD  •  connected";
         var identity = Supabase.VisibleIdentity(api.Current?.Email ?? "member");
         account.Text = "  " + identity;
+        account.AutoEllipsis = true;
+        status.AutoEllipsis = true;
         transcript.Text = "Welcome to ZuzuCord V2.\n\nChoose a channel to join the conversation.";
+    }
+
+    private async Task TryPullBetaThemeAsync()
+    {
+        if (!settings.BetaSyncEnabled || api.Current is null) return;
+        try
+        {
+            var theme = await api.ReadBetaThemeAsync();
+            if (theme is null || !theme.SyncEnabled) return;
+            var preset = ThemeColors.NormalizeTheme(theme.Theme);
+            var accent = ThemeColors.NormalizeAccent(theme.Accent);
+            if (preset == settings.Theme && accent == settings.Accent) return;
+            settings.Theme = preset;
+            settings.Accent = accent;
+            settings.Save();
+            ThemeColors.Configure(settings.Theme, settings.Accent);
+            ThemeColors.ApplyToOpenForms();
+            status.Text = "Beta theme synced from website";
+        }
+        catch (Exception error) { status.Text = "Beta sync unavailable: " + error.Message; }
     }
 
     private async Task LoadRooms()
