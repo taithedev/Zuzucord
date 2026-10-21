@@ -4,11 +4,11 @@ import { appApi } from './api';
 
 export function CrystalCenter({
   userId,serverId,serverName,isOwner,level,crystals,legacyCredits,
-  onBoost,onMessage
+  onBoost,onMessage,onSaved
 }:{
   userId:string;serverId:string|null;serverName:string;isOwner:boolean;
   level:number;crystals:number;legacyCredits:number;
-  onBoost:()=>Promise<void>;onMessage:(message:string)=>void
+  onBoost:()=>Promise<void>;onMessage:(message:string)=>void;onSaved:()=>Promise<void>
 }) {
   const [history,setHistory]=useState<{id:string;amount:number;reason:string;created_at:string}[]>([]);
   const [accent,setAccent]=useState('#a978ff');
@@ -33,7 +33,8 @@ export function CrystalCenter({
     setBusy(true);
     try{
       await appApi.customizeServer(serverId,accent,gradient);
-      onMessage('Server appearance saved to Supabase. Members will see the new colors when they reopen your server.');
+      await onSaved();
+      onMessage('Server colors saved. Your server banner has been refreshed for the current session.');
     }catch(error){onMessage(error instanceof Error?error.message:'Could not save server style.');}
     finally{setBusy(false);}
   };
