@@ -114,15 +114,15 @@ internal sealed class ChatWindow : Form
         header.Controls.Add(new Label { Text = "ZuzuCord  /  V2", Dock = DockStyle.Fill,
             Font = new Font("Segoe UI Semibold", 16), ForeColor = Color.White, TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
         header.Controls.Add(status, 1, 0);
-        var reload = SiticoneShell.Action("Refresh", 118);
+        var reload = SiticoneShell.Action("Refresh", 106);
         header.Controls.Add(reload, 2, 0);
-        var profile = SiticoneShell.Action("My profile", 120);
+        var profile = SiticoneShell.Action("Profile", 106);
         header.Controls.Add(profile, 3, 0);
         profile.Click += (_, _) => { using var dialog = new ProfileForm(api); dialog.ShowDialog(this); };
-        var friendsButton = SiticoneShell.Action("Friends / DMs", 125);
+        var friendsButton = SiticoneShell.Action("Friends", 106);
         header.Controls.Add(friendsButton, 4, 0);
         friendsButton.Click += (_, _) => { using var friendsDialog = new FriendsForm(api); friendsDialog.ShowDialog(this); };
-        var appearance = SiticoneShell.Action("Appearance", 125);
+        var appearance = SiticoneShell.Action("Themes", 106);
         header.Controls.Add(appearance, 5, 0);
         appearance.Click += (_, _) =>
         {
@@ -137,7 +137,7 @@ internal sealed class ChatWindow : Form
         var serverRail = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, BackColor = Ui.Background, Padding = new Padding(5, 0, 5, 0) };
         serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
         serverRail.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 188));
+        serverRail.RowStyles.Add(new RowStyle(SizeType.Absolute, 211));
         serverRail.Controls.Add(new Label {
             Text = "  SERVERS", Dock = DockStyle.Fill, ForeColor = ThemeColors.Muted,
             Font = new Font("Segoe UI Semibold", 11), TextAlign = ContentAlignment.MiddleLeft
