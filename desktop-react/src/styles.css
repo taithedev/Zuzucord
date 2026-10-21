@@ -251,3 +251,40 @@ button.activity-server:hover{color:white}
 /* Supabase friend-presence indicators */
 .presence-dot{width:9px;height:9px;flex:none;border-radius:50%;background:#45c47b;box-shadow:0 0 0 2px #18251e}
 .friend-row-text small{display:flex;align-items:center;gap:5px}
+
+/* v0.8 production community controls */
+.title-release{display:flex;align-items:center;gap:6px;-webkit-app-region:no-drag}
+.release-check{display:flex;gap:7px;align-items:center;border:1px solid #ffffff24;background:#ffffff0c;color:#d4bdfa;border-radius:7px;font-size:10px;padding:5px 9px}
+.release-check:hover{background:#ffffff1a;color:#fff}
+.update-banner{position:fixed;z-index:65;left:50%;transform:translateX(-50%);bottom:25px;max-width:calc(100vw - 40px);display:flex;align-items:center;gap:15px;padding:13px 15px;background:#24142f;border:1px solid color-mix(in srgb,var(--accent) 55%,#332340);box-shadow:0 12px 45px #0009;border-radius:12px}
+.update-banner>div{display:flex;align-items:center;gap:11px}
+.update-banner>div strong{font-size:12px;white-space:nowrap}
+.update-banner small{color:#aaa0be;font-size:10px}
+.update-banner .button{white-space:nowrap}
+.official-rail{color:#fff;background:linear-gradient(130deg,#302244,#553a76)}
+.official-nav{gap:8px}
+.official-badge{font-size:8px;letter-spacing:.3px;color:#fffeff;background:var(--accent);padding:3px 6px;border-radius:4px;margin-left:auto}
+.official-inbox{max-height:65vh;overflow-y:auto}
+.official-header{display:flex;gap:12px;align-items:center;background:#261433;border-radius:11px;padding:15px}
+.official-header>svg{color:#cbb1ff}
+.official-header>div{display:flex;flex-direction:column;gap:4px}
+.official-header>div strong{font-size:14px}
+.official-header>div span{font-size:11px;color:#b9a7d1}
+.announcement-item{background:#120d1a;border:1px solid #ffffff20;border-radius:11px;padding:15px;display:grid;gap:8px}
+.announcement-item>strong{font-size:13px}
+.announcement-item>time{font-size:10px;color:#aa9bb9}
+.announcement-item p{margin:0;font-size:12px;color:#dcd1e5;white-space:pre-wrap;overflow-wrap:anywhere}
+.credit-summary{display:flex;align-items:center;gap:13px;background:linear-gradient(110deg,#37214d,#1c1426);border:1px solid #5e4171;padding:19px;border-radius:13px}
+.credit-summary>svg{color:var(--accent)}
+.credit-summary>div{display:flex;flex-direction:column;gap:6px}
+.credit-summary strong{font-size:15px}
+.credit-summary small{font-size:11px;color:#c1adcf}
+.bot-app-row{display:flex;align-items:center;gap:10px;border:1px solid #ffffff14;padding:12px;border-radius:10px}
+.bot-app-row svg{color:var(--accent);flex:none}
+.bot-app-row>div{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.bot-app-row strong{font-size:12px}
+.bot-app-row small{font-size:11px;color:#a898bd;overflow:hidden;text-overflow:ellipsis}
+.bot-app-row button{min-width:78px}
+.installed-mark{color:#9cdfa3;font-size:11px}
+@media(max-width:1050px){.update-banner{width:min(650px,calc(100vw - 24px))}.update-banner small{display:none}}
+@media(prefers-reduced-motion:reduce){.update-banner{transition:none}}
