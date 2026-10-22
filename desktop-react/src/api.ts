@@ -46,7 +46,11 @@ export type Appearance = {
   accent: string;
   gradient_enabled: boolean;
   gradient_start: string;
+  gradient_middle: string;
   gradient_end: string;
+  gradient_accent: string;
+  gradient_angle: number;
+  glow_position: number;
   glass_strength: number;
   motion_enabled: boolean;
   compact: boolean;
@@ -54,8 +58,9 @@ export type Appearance = {
 };
 export const DEFAULT_APPEARANCE: Appearance = {
   theme: 'oled', accent: '#a978ff',
-  gradient_enabled: true, gradient_start: '#25083f', gradient_end: '#09050f',
-  glass_strength: 64, motion_enabled: true, compact: false, sync_enabled: false
+  gradient_enabled: true, gradient_start: '#25083f', gradient_middle: '#140b25',
+  gradient_end: '#09050f', gradient_accent: '#070913',
+  gradient_angle: 135, glow_position: 25, glass_strength: 64, motion_enabled: true, compact: false, sync_enabled: false
 };
 
 const hex = (value: unknown, fallback: string): string =>
@@ -67,7 +72,11 @@ export function validateAppearance(input: unknown): Appearance {
     accent: hex(v.accent, DEFAULT_APPEARANCE.accent),
     gradient_enabled: v.gradient_enabled !== false,
     gradient_start: hex(v.gradient_start, DEFAULT_APPEARANCE.gradient_start),
+    gradient_middle: hex(v.gradient_middle, DEFAULT_APPEARANCE.gradient_middle),
     gradient_end: hex(v.gradient_end, DEFAULT_APPEARANCE.gradient_end),
+    gradient_accent: hex(v.gradient_accent, DEFAULT_APPEARANCE.gradient_accent),
+    gradient_angle: Math.max(0,Math.min(360,Number.isFinite(Number(v.gradient_angle))?Math.round(Number(v.gradient_angle)):135)),
+    glow_position: Math.max(0,Math.min(100,Number.isFinite(Number(v.glow_position))?Math.round(Number(v.glow_position)):25)),
     glass_strength: Math.max(0, Math.min(100, Number(v.glass_strength ?? 64) || 0)),
     motion_enabled: v.motion_enabled !== false,
     compact: v.compact === true,
@@ -303,15 +312,21 @@ export const appApi = {
   getBeta: async (userId: string): Promise<Record<string, unknown> | null> =>
     checked(await client.from('zuzucord_user_sync').select('*').eq('user_id', userId).maybeSingle()),
   saveBeta: async (userId: string, theme: Appearance, serverId: string | null): Promise<void> => {
-    checked(await client.from('zuzucord_beta_sync').upsert({
+    const values = {
       user_id: userId,
       theme: theme.theme, accent: theme.accent,
       gradient_enabled: theme.gradient_enabled,
-      gradient_start: theme.gradient_start, gradient_end: theme.gradient_end,
+      gradient_start: theme.gradient_start, gradient_middle: theme.gradient_middle,
+      gradient_end: theme.gradient_end, gradient_accent: theme.gradient_accent,
+      gradient_angle: theme.gradient_angle, glow_position: theme.glow_position,
       glass_strength: theme.glass_strength, motion_enabled: theme.motion_enabled,
       sync_enabled: theme.sync_enabled, last_server_id: serverId,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' }));
+    };
+    // The website reads user_sync. Update production before the historical
+    // beta table so the two clients actually share their latest appearance.
+    checked(await client.from('zuzucord_user_sync').upsert(values, {onConflict:'user_id'}));
+    checked(await client.from('zuzucord_beta_sync').upsert(values, {onConflict:'user_id'}));
   },
   getStats: async () => checked(await client.rpc('zuzucord_public_stats')) as {
     total_users: number; created_today: number; banned_users: number; total_servers: number
