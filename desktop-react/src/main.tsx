@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  ArrowLeft, Bell, Bot, Gem, Eye, EyeOff, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Copy,
+  ArrowLeft, Bell, Bot, Gem, Film, Eye, EyeOff, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Copy,
   Crown, Ellipsis, Gift, Globe2, Hash, Heart, Home, LockKeyhole, LogOut, Maximize2,
   MessageCircle, MessagesSquare, Minus, Moon, Palette, PanelRightClose, PanelRightOpen,
   Plus, RefreshCw, Search, Send, Server as ServerIcon, Settings2, Shield,
@@ -19,11 +19,12 @@ import { ServerRolesEditor } from './ServerRolesEditor';
 import { OwnerConsole } from './OwnerConsole';
 import { CrystalCenter } from './CrystalCenter';
 import { SettingsScreen } from './SettingsScreen';
+import { SocialsHub } from './SocialsHub';
 import { ContextMenu, type MenuDetails } from './ContextMenu';
 import { readClientPreferences, saveClientPreferences, type ClientPreferences } from './clientPreferences';
 import './styles.css';
 
-type View = 'friends' | 'channel' | 'dm';
+type View = 'friends' | 'channel' | 'dm' | 'socials';
 type FriendTab = 'all' | 'pending' | 'online';
 type ModalName = 'settings' | 'new-server' | 'join-server' | 'new-channel' | 'add-friend'
   | 'members' | 'invite' | 'profile' | 'bot' | 'announcements' | 'boost' | 'install-bot' | 'roles' | 'owner-tools' | null;
@@ -612,7 +613,7 @@ function App() {
     <header className="titlebar">
       <div className="title-nav"><Sparkles size={15} /> <strong>ZuzuCord</strong> <span>V3 • React Desktop</span></div>
       <span className="window-drag" />
-      <div className="title-context">{view === 'friends' ? 'Friends' : view === 'dm' ? 'Direct Messages' : currentServer?.name || 'Public Rooms'}</div>
+      <div className="title-context">{view === 'friends' ? 'Friends' : view === 'dm' ? 'Direct Messages' : view === 'socials' ? 'Socials' : currentServer?.name || 'Public Rooms'}</div>
       <span className="window-drag" />
       <div className="title-release">
         <button className="release-check" title="Check official v-prefixed GitHub releases" disabled={updating}
@@ -645,6 +646,10 @@ function App() {
           <button title="Friends" className={'realm-logo ' + (view === 'friends' ? 'selected' : '')}
             onClick={() => { setView('friends'); setSelectedFriend(null); }}>
             <Sparkles size={24} /></button>
+          <button title="Socials · posts, Moments and creators"
+            className={'realm-bubble socials-rail '+(view === 'socials' ? 'selected' : '')}
+            onClick={() => {setView('socials');setSelectedFriend(null);setSelectedServer(null);setContextMenu(null);}}>
+            <Film size={21}/></button>
           <span className="rail-divider" />
           <button title="Public rooms" className={'realm-bubble ' + (view === 'channel' && !selectedServer ? 'selected' : '')}
             onClick={() => serverSelect(null)}><Globe2 size={23} /></button>
@@ -692,6 +697,9 @@ function App() {
           <button className={'sidebar-nav-button ' + (view === 'friends' ? 'selected' : '')}
             onClick={() => { setView('friends'); setSelectedFriend(null); }}><Users size={19} /> Friends {pendingCount > 0 && <b className="count-chip">{pendingCount}</b>}</button>
           <button className="sidebar-nav-button" onClick={() => openModal('add-friend')}><UserPlus size={19} /> Add Friend</button>
+          <button className={'sidebar-nav-button '+(view==='socials'?'selected':'')}
+            onClick={()=>{setView('socials');setSelectedFriend(null);setSelectedServer(null);}}>
+            <Film size={19}/> Socials <span className="socials-sidebar-marker">NEW</span></button>
           <button className="sidebar-nav-button official-nav" onClick={() => openModal('announcements')}>
             <ShieldCheck size={19} /> ZuzuCord Official <span className="official-badge">OFFICIAL</span></button>
           {userRoles.includes('owner') && <button className="sidebar-nav-button owner-nav"
@@ -699,7 +707,7 @@ function App() {
           <div className="sidebar-heading"><span>{selectedServer ? currentServer?.name || 'YOUR SERVER' : 'DIRECT MESSAGES'}</span>
             <IconButton label={selectedServer ? 'Create channel' : 'Add friend'}
               onClick={() => openModal(selectedServer ? 'new-channel' : 'add-friend')}><Plus size={15} /></IconButton></div>
-          {view === 'channel' || selectedServer ? <div className="channel-nav">
+          {view === 'channel' || (selectedServer && view!=='socials') ? <div className="channel-nav">
             {channels.filter(c => !query || c.name.toLowerCase().includes(query.toLowerCase())).map(ch => <button
               key={ch.id} className={'channel-button ' + (selectedChannel === ch.id && view === 'channel' ? 'selected' : '')}
               onContextMenu={event=>openContext(event,{title:'# '+ch.name,actions:[
@@ -751,6 +759,7 @@ function App() {
           <div className="content-toolbar">
             <div className="toolbar-heading">
               {view === 'friends' ? <><Users size={21} /><strong>Friends</strong></> :
+               view === 'socials' ? <><Film size={21}/><strong>Socials</strong></> :
                view === 'dm' ? <><MessageCircle size={19} /><strong>{currentFriend?.username || 'Direct Messages'}</strong></> :
                <><Hash size={20} /><strong>{currentChannel?.name || 'Select a channel'}</strong></>}
             </div>
@@ -761,16 +770,20 @@ function App() {
                 {next === 'pending' && pendingCount > 0 && <b className="count-chip">{pendingCount}</b>}
               </button>)}
               <button className="add-friend-pill" onClick={() => openModal('add-friend')}>Add Friend</button>
-            </div> : <span className="channel-description">{view === 'channel' ? currentChannel?.description || 'Community conversation' : 'Private conversation'}</span>}
+            </div> : <span className="channel-description">
+              {view === 'socials' ? 'Moments, posts and creators' :
+                view === 'channel' ? currentChannel?.description || 'Community conversation' : 'Private conversation'}
+            </span>}
             <div className="toolbar-right">
               <IconButton label="Refresh" onClick={() => view === 'friends' ? void loadFriends() : view === 'channel'
-                ? void loadMessages() : void loadDMs()}><RefreshCw size={19} /></IconButton>
+                ? void loadMessages() : view==='dm'? void loadDMs() : setStatus('Refresh Socials from its feed.')}><RefreshCw size={19} /></IconButton>
               <IconButton label={rightPanel ? 'Hide activity panel' : 'Show activity panel'}
                 onClick={() => setClientPreferences(prev=>({...prev,showActivityPanel:!rightPanel}))}>{rightPanel ? <PanelRightClose size={19} /> : <PanelRightOpen size={19} />}</IconButton>
               <IconButton label="Appearance settings" onClick={() => openModal('settings')}><SlidersHorizontal size={20} /></IconButton>
             </div>
           </div>
-          {view === 'friends' ? <>
+          {view === 'socials' ? <SocialsHub userId={me} owner={userRoles.includes('owner')}
+            onMessage={setStatus}/> : view === 'friends' ? <>
             <div className="list-search"><Search size={19} /><input placeholder="Search your friends" value={query}
               onChange={e => setQuery(e.target.value)} /></div>
             <div className="list-label">{tab === 'online' ? 'PRESENCE' : tab === 'pending' ? 'PENDING REQUESTS' : 'ALL FRIENDS'} — {displayedFriends.length}</div>
@@ -847,7 +860,7 @@ function App() {
             </form>
           </div>}
         </section>
-        {rightPanel && <aside className="activity-panel">
+        {rightPanel && view!=='socials' && <aside className="activity-panel">
           <div className="activity-heading">{view === 'friends' ? 'Your Communities' : view === 'channel' ? 'Server & Activity' : 'Friend Details'}</div>
           {view === 'friends' ? <>
             <div className="activity-box"><h3><ServerIcon size={17}/> Your servers <span>{servers.length}</span></h3>
