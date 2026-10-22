@@ -1,58 +1,142 @@
-const { net, shell, app } = require('electron');
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
-const { isNewer, selectUpdate } = require('./versions.cjs');
-const endpoint = 'https://api.github.com/repos/taithedev/Zuzucord/releases?per_page=60';
-function installedTag() {
-  try { return require('./release.json').tag || ('v' + app.getVersion()); }
-  catch { return 'v' + app.getVersion(); }
+'use strict';
+// First install is handled by NSIS. Subsequent versions are downloaded in
+// the background and installed over the existing app by electron-updater.
+// The only allowed feed is the official public taithedev/Zuzucord GitHub repo.
+const { app, net, BrowserWindow } = require('electron');
+const { autoUpdater } = require('electron-updater');
+
+const RELEASE_URL = 'https://api.github.com/repos/taithedev/Zuzucord/releases/latest';
+const RETRY_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const releaseTag = /^v\d+\.\d+\.\d+$/;
+const installerName = /^ZuzuCord-React-(\d+\.\d+\.\d+)-x64\.exe$/;
+const state = { phase: 'idle', version: app.getVersion(), percent: 0, message: '' };
+let checking = null;
+let started = false;
+let timer = null;
+let lastProgress = -1;
+
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.allowPrerelease = false;
+autoUpdater.allowDowngrade = false;
+autoUpdater.fullChangelog = false;
+
+function send(next) {
+  Object.assign(state, next);
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send('update:status', { ...state });
+  }
 }
-async function lookupUpdate() {
-  if (!app.isPackaged) return null;
-  const response = await net.fetch(endpoint, {
-    headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'ZuzuCord-Updater' }
+function currentState() { return { ...state }; }
+function versionParts(version) {
+  if (!/^\d+\.\d+\.\d+$/.test(version)) return null;
+  return version.split('.').map(Number);
+}
+function newerVersion(next, current) {
+  const a = versionParts(next), b = versionParts(current);
+  if (!a || !b) return false;
+  for (let i = 0; i < 3; i++) {
+    if (a[i] !== b[i]) return a[i] > b[i];
+  }
+  return false;
+}
+function validateRelease(release, currentVersion) {
+  if (!release || release.draft || release.prerelease || !releaseTag.test(release.tag_name || ''))
+    return null;
+  const version = release.tag_name.slice(1);
+  if (!newerVersion(version, currentVersion)) return null;
+  const assets = Array.isArray(release.assets) ? release.assets : [];
+  const installer = assets.find(asset => {
+    const match = installerName.exec(asset.name || '');
+    return match && match[1] === version &&
+      (asset.browser_download_url || '').startsWith(
+        'https://github.com/taithedev/Zuzucord/releases/download/' + release.tag_name + '/');
   });
-  if (!response.ok) throw Error('Could not check GitHub releases (HTTP ' + response.status + ')');
-  const releases = await response.json();
-  if (!Array.isArray(releases)) throw Error('Invalid GitHub release response');
-  return selectUpdate(releases, installedTag());
+  if (!installer || !assets.some(asset => asset.name === 'latest.yml')) return null;
+  return { version, tag: release.tag_name };
 }
-function knownAsset(url, release) {
-  return typeof url === 'string' && typeof release?.downloadUrl === 'string' &&
-    url === release.downloadUrl &&
-    url.startsWith('https://github.com/taithedev/Zuzucord/releases/download/');
-}
-async function downloadUpdate(release) {
-  if (!release || !knownAsset(release.downloadUrl, release)) throw Error('Invalid release URL');
-  // Recheck metadata from GitHub immediately before downloading, rather than
-  // trusting renderer-supplied URLs, tags, filenames, or hashes.
-  const latest = await lookupUpdate();
-  if (!latest || latest.tag !== release.tag || latest.downloadUrl !== release.downloadUrl)
-    throw Error('Release details changed. Recheck for updates.');
-  const response = await net.fetch(latest.downloadUrl, {
-    headers: { 'User-Agent': 'ZuzuCord-Updater' }
+async function confirmedUpdate() {
+  const response = await net.fetch(RELEASE_URL, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'ZuzuCord-Desktop-AutoUpdater'
+    }
   });
-  if (!response.ok) throw Error('GitHub download failed (HTTP ' + response.status + ')');
-  const sizeLimit = 300 * 1024 * 1024;
-  const declared = Number(response.headers.get('content-length') || '0');
-  if (declared > sizeLimit) throw Error('Download exceeds the allowed size limit.');
-  const array = await response.arrayBuffer();
-  if (array.byteLength > sizeLimit || array.byteLength < 1000000)
-    throw Error('Invalid installer size.');
-  const data = Buffer.from(array);
-  const digest = crypto.createHash('sha256').update(data).digest('hex');
-  if (latest.sha256 && digest.toLowerCase() !== latest.sha256.toLowerCase())
-    throw Error('Installer SHA-256 mismatch. The file was not saved.');
-  const target = path.join(app.getPath('downloads'), latest.filename);
-  const partial = target + '.download';
-  fs.writeFileSync(partial, data);
-  fs.renameSync(partial, target);
-  shell.showItemInFolder(target);
-  return { name: latest.filename, path: target, sha256: digest,
-    verified: Boolean(latest.sha256),
-    note: latest.sha256
-      ? 'GitHub release digest verified. Open the installer when ready.'
-      : 'Downloaded from the official GitHub release. No release checksum was published, so review before running.' };
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw Error('GitHub update lookup failed (HTTP ' + response.status + ')');
+  }
+  return validateRelease(await response.json(), app.getVersion());
 }
-module.exports = { lookupUpdate, downloadUpdate, installedTag };
+
+autoUpdater.on('checking-for-update', () => send({ phase:'checking', message:'Checking for updates…' }));
+autoUpdater.on('update-available', info => send({
+  phase:'downloading', version:info.version, percent:0, message:'Downloading update in the background…'
+}));
+autoUpdater.on('download-progress', progress => {
+  const percent = Math.min(100, Math.max(0, Math.round(progress.percent)));
+  if (percent === lastProgress) return;
+  lastProgress = percent;
+  send({ phase:'downloading', percent,
+    message:'Downloading update in the background (' + percent + '%)…' });
+});
+autoUpdater.on('update-downloaded', info => send({
+  phase:'ready', version:info.version, percent:100,
+  message:'Update downloaded. It will install automatically when you close ZuzuCord, or restart now.'
+}));
+autoUpdater.on('update-not-available', () => {
+  if (state.phase !== 'ready') send({ phase:'current', version:app.getVersion(),
+    message:'You have the latest ZuzuCord version.' });
+});
+autoUpdater.on('error', error => {
+  send({ phase:'error', message: String(error?.message || error).slice(0,240) });
+});
+
+async function checkForUpdates() {
+  if (!app.isPackaged || process.platform !== 'win32') {
+    send({ phase:'unavailable', message:'Auto updates run in the installed Windows application only.' });
+    return currentState();
+  }
+  if (state.phase === 'ready' || state.phase === 'downloading') return currentState();
+  if (checking) return checking;
+  checking = (async () => {
+    try {
+      send({ phase:'checking', message:'Checking official GitHub releases…' });
+      const allowed = await confirmedUpdate();
+      if (!allowed) {
+        send({ phase:'current', version:app.getVersion(),
+          message:'You have the latest ZuzuCord version.' });
+        return currentState();
+      }
+      // electron-updater uses the embedded app-update.yml GitHub provider
+      // plus electron-builder's latest.yml SHA-512 metadata for verification.
+      // The pre-check only authorizes v-prefixed published stable releases.
+      await autoUpdater.checkForUpdates();
+    } catch (error) {
+      send({ phase:'error', message:String(error?.message || error).slice(0,240) });
+    } finally {
+      checking = null;
+    }
+    return currentState();
+  })();
+  return checking;
+}
+
+function restartAndInstall() {
+  if (state.phase !== 'ready') throw Error('No fully downloaded update is ready.');
+  // NSIS starts silently and relaunches the updated ZuzuCord app.
+  setImmediate(() => autoUpdater.quitAndInstall(true, true));
+  return { ok:true };
+}
+function startAutoUpdates() {
+  if (started) return;
+  started = true;
+  if (!app.isPackaged || process.platform !== 'win32') return;
+  // Don't interrupt sign-in or an unsent message. Install on normal app exit;
+  // the in-app "Restart now" button can apply it sooner.
+  setTimeout(() => void checkForUpdates(), 8000).unref();
+  timer = setInterval(() => void checkForUpdates(), RETRY_INTERVAL_MS);
+  timer.unref();
+}
+module.exports = { currentState, checkForUpdates, restartAndInstall,
+  startAutoUpdates, validateRelease, newerVersion };
