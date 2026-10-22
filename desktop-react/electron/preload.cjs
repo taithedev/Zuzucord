@@ -6,10 +6,11 @@ contextBridge.exposeInMainWorld('zuzuDesktop', Object.freeze({
   windowAction: action => ipcRenderer.invoke('win:action', action),
   version: () => ipcRenderer.invoke('app:version'),
   checkUpdates: () => ipcRenderer.invoke('update:check'),
-  downloadUpdate: release => ipcRenderer.invoke('update:download', release),
-  onUpdateAvailable: callback => {
+  updateState: () => ipcRenderer.invoke('update:state'),
+  restartToUpdate: () => ipcRenderer.invoke('update:install'),
+  onUpdateStatus: callback => {
     const listener = (_event, payload) => callback(payload);
-    ipcRenderer.on('update:available', listener);
-    return () => ipcRenderer.removeListener('update:available', listener);
+    ipcRenderer.on('update:status', listener);
+    return () => ipcRenderer.removeListener('update:status', listener);
   }
 }));
