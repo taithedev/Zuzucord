@@ -873,6 +873,35 @@ function App() {
           <div className="activity-note"><LockKeyhole size={16}/> Account and online activity come from ZuzuCord Supabase. Presence is visible only to accepted friends.</div>
         </aside>}
       </main>
+      <ContextMenu menu={contextMenu} onClose={()=>setContextMenu(null)} />
+      {modal === 'settings' && session && <SettingsScreen
+        session={session} username={username} roles={userRoles}
+        profileName={profileName} profileStatus={profileStatus}
+        appearance={appearance} preferences={clientPreferences} updateState={updateState}
+        onClose={()=>setModal(null)}
+        onAppearance={saveAppearance}
+        onImport={async()=>{
+          if(!me)return null;
+          const remote=await appApi.getBeta(me);
+          return remote?{...validateAppearance(remote),compact:appearance.compact}:null;
+        }}
+        onPreferences={setClientPreferences}
+        onProfile={async(name,statusText)=>{
+          if(!me)throw Error('Sign in before editing your profile.');
+          await appApi.saveProfile(me,name,statusText);
+          setProfileName(name);setProfileStatus(statusText);
+        }}
+        onLogout={async()=>{
+          await client.auth.signOut();
+          setSession(null);setUsername('');setModal(null);
+          setServers([]);setFriends([]);setSelectedFriend(null);setSelectedServer(null);
+          seenFriendRequests.current=null;loadedBeta.current=false;setView('friends');
+        }}
+        onCheckUpdates={checkUpdates} onRestartUpdate={restartToUpdate}
+        hasServer={Boolean(selectedServer)} serverName={currentServer?.name||''}
+        onOpenServerRoles={()=>{setModal(null);openModal('roles');}}
+        onOpenCrystals={()=>{setModal(null);openModal('boost');}}
+      />}
       {(updateState.phase === 'ready' || updateState.phase === 'downloading') &&
       <div className="update-banner" role="status">
         <div><RefreshCw size={17}/>
@@ -890,7 +919,7 @@ function App() {
             <span style={{width:updateState.percent+'%'}}/></div>}
       </div>}
       {status && <div className="toast" role="status"><span>{status}</span><IconButton label="Dismiss" onClick={()=>setStatus('')}><X size={15}/></IconButton></div>}
-      {modal && <Dialog heading={{
+      {modal && modal !== 'settings' && <Dialog heading={{
         settings:'Appearance & effects', 'new-server':'Create a server','join-server':'Join a server',
         'new-channel':'New text channel','add-friend':'Add a friend',members:'Server members',
         invite:'Invite people',profile:'Your profile',bot:'ZuzuBot settings',
