@@ -29,6 +29,7 @@ function send(next) {
 function currentState() { return { ...state }; }
 async function confirmedUpdate() {
   const response = await net.fetch(RELEASE_URL, {
+    signal: AbortSignal.timeout(15000),
     headers: {
       Accept: 'application/vnd.github+json',
       'User-Agent': 'ZuzuCord-Desktop-AutoUpdater'

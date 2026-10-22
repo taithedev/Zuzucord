@@ -29,10 +29,13 @@ jobs:
       - name: Install dependencies
         working-directory: desktop-react
         shell: pwsh
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Test v-prefixed release policy
         working-directory: desktop-react
         run: node --test electron/versions.test.cjs electron/update-policy.test.cjs
+      - name: Verify live Supabase connection and anonymous access boundaries
+        working-directory: desktop-react
+        run: node scripts/test-backend.mjs
       - name: Set unique self-update version
         working-directory: desktop-react
         shell: pwsh
@@ -66,6 +69,9 @@ jobs:
             if ($file.Length -lt 1000000) { throw ('Unexpectedly small asset: '+$file.Name) }
             Write-Host ('Built: '+$file.Name+' ('+$file.Length+' bytes)')
           }
+      - name: Install, launch, repair and uninstall on Windows
+        shell: pwsh
+        run: ./desktop-react/scripts/test-windows-install.ps1
       - uses: actions/upload-artifact@v4
         with:
           name: ZuzuCord-React-Windows
@@ -83,4 +89,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "v0.11.${{ github.run_number }}"
-          gh release create $tag desktop-react/release/*.exe desktop-react/release/*.zip desktop-react/release/latest.yml desktop-react/release/*.exe.blockmap --target main --latest --title "ZuzuCord $tag — Auto-update" --notes "ZuzuCord installed Windows app with automatic update checking, SHA-512-verified background downloads and installation on close or Restart & update. The first installation still uses the NSIS setup EXE; subsequent updates do not require manual installer downloads. Includes native developer workspace, verified role access, user-owned avatars and banners, expanded account settings, opt-in Windows startup, network diagnostics and microphone test. Crystals, custom roles and Socials remain supported. Voice calls are not yet implemented. Unsigned preview: code signing and real two-version Windows update testing remain required."
+          gh release create $tag desktop-react/release/*.exe desktop-react/release/*.zip desktop-react/release/latest.yml desktop-react/release/*.exe.blockmap --target ${{ github.sha }} --latest --title "ZuzuCord $tag — Auto-update" --notes "ZuzuCord installed Windows app with automatic update checking, SHA-512-verified background downloads and installation on close or Restart & update. The first installation still uses the NSIS setup EXE; subsequent updates do not require manual installer downloads. Passed automated Windows install, sign-in render, preload bridge, reinstall and uninstall checks, plus live Supabase connection and anonymous private-data access checks. Includes native developer workspace, verified role access, user-owned avatars and banners, expanded account settings, opt-in Windows startup, network diagnostics and microphone test. Crystals, custom roles and Socials remain supported. Voice calls are not yet implemented. Unsigned preview: code signing and real two-version Windows update testing remain required."

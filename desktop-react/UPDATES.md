@@ -24,3 +24,9 @@ Electron-builder/electron-updater handles NSIS update downloads and SHA-512 veri
 The current builds are **unsigned previews**. Do not silently force-close a running client with unsent messages. The implementation offers an immediate restart button but otherwise waits for the user to exit the app before installation.
 
 Tests: `node --test electron/versions.test.cjs electron/update-policy.test.cjs`.
+
+## Windows publication gates
+
+Main-branch releases now install the generated NSIS EXE on the Windows runner, launch the installed executable, verify the real React sign-in screen and preload version IPC, reinstall and launch again, then uninstall. A dedicated test profile keeps accounts isolated. The pipeline also checks the live Supabase Auth endpoint, public stats RPC, and that anonymous requests cannot read private messages or role grants. A failed check prevents publication. Releases are pinned to the tested commit. These checks do not cover authenticated chat, voice calls, or a two-version automatic update round trip.
+
+Dependencies are pinned with a committed npm lockfile and Windows uses `npm ci`. Opening ZuzuCord again focuses the existing window; update-feed requests time out after 15 seconds instead of leaving the checker waiting indefinitely.

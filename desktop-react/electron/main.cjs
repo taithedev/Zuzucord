@@ -4,6 +4,21 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const updates = require('./updates.cjs');
 let windowRef;
+const smokeReport = process.env.ZUZUCORD_SMOKE_REPORT;
+if (smokeReport) {
+  // Keep CI's test profile isolated from real accounts and preferences.
+  app.setPath('userData', path.join(path.dirname(smokeReport), 'smoke-profile'));
+}
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  return;
+}
+app.on('second-instance', () => {
+  if (!windowRef || windowRef.isDestroyed()) return;
+  if (windowRef.isMinimized()) windowRef.restore();
+  windowRef.show();
+  windowRef.focus();
+});
 const memorySecrets = new Map();
 const goodKey = (key) => typeof key === 'string' && /^sb-[a-z0-9_-]+-auth-token$/.test(key) && key.length < 130;
 function secretPath(key) {
@@ -102,10 +117,11 @@ function makeWindow() {
   });
   windowRef.once('ready-to-show', () => {
     windowRef?.show();
-    updates.startAutoUpdates();
+    if (!smokeReport) updates.startAutoUpdates();
     const updateState = updates.currentState();
     if (updateState.phase !== 'idle') windowRef?.webContents.send('update:status', updateState);
   });
+  if (smokeReport) require('./smoke.cjs').verifyLaunch(windowRef, smokeReport);
   if (process.env.ZUZUCORD_DEV_URL && !app.isPackaged) windowRef.loadURL(process.env.ZUZUCORD_DEV_URL);
   else windowRef.loadFile(path.join(__dirname, '../dist/index.html'));
   windowRef.webContents.setWindowOpenHandler(({ url }) => {
