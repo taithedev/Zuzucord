@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bookmark, Camera, Check, ChevronDown, Clock3, Compass, Copy, Film, Heart,
-  Image as ImageIcon, MessageCircle, MoreHorizontal, RefreshCw, Send, Sparkles, Trash2,
+  Image as ImageIcon, MessageCircle, MoreHorizontal, Repeat2, RefreshCw, Send, Sparkles, Trash2,
   UserPlus, Users, X } from 'lucide-react';
 import { client } from './api';
 
 type SocialKind = 'post'|'moment';
-type Tab = 'feed'|'moments'|'following'|'saved'|'discover'|'hidden'|'reports';
+type Tab = 'feed'|'moments'|'following'|'saved'|'discover'|'hidden'|'reports'|'reshares';
 type Post = {id:string;author_id:string;kind:SocialKind;content:string;media_path:string|null;
   media_type:'image'|'video'|null;created_at:string};
 type Reaction = {post_id:string;user_id:string};
@@ -27,8 +27,8 @@ const ago=(date:string)=>{
   return new Date(date).toLocaleDateString();
 };
 const getErr=(error:unknown)=>error instanceof Error?error.message:String(error);
-export function SocialsHub({userId,owner,onMessage}:{
-  userId:string;owner:boolean;onMessage:(message:string)=>void
+export function SocialsHub({userId,owner,onMessage,onAccountSettings}:{
+  userId:string;owner:boolean;onMessage:(message:string)=>void;onAccountSettings:()=>void
 }){
   const [tab,setTab]=useState<Tab>('feed');
   const [kind,setKind]=useState<SocialKind>('post');
@@ -37,6 +37,9 @@ export function SocialsHub({userId,owner,onMessage}:{
   const [preview,setPreview]=useState<string|null>(null);
   const [posts,setPosts]=useState<Post[]>([]);
   const [likes,setLikes]=useState<Reaction[]>([]);
+  const [reposts,setReposts]=useState<Reaction[]>([]);
+  const [selectedCreator,setSelectedCreator]=useState<string|null>(null);
+  const [creatorStatus,setCreatorStatus]=useState('');
   const [saved,setSaved]=useState<Set<string>>(new Set());
   const [following,setFollowing]=useState<Set<string>>(new Set());
   const [hiddenCreators,setHiddenCreators]=useState<Set<string>>(new Set());
@@ -71,6 +74,9 @@ export function SocialsHub({userId,owner,onMessage}:{
       const likesResult=postIds.length?await client.from('zuzucord_social_likes')
         .select('post_id,user_id').in('post_id',postIds):{data:[],error:null};
       if(likesResult.error)throw likesResult.error;
+      const repostResult=postIds.length?await client.from('zuzucord_social_reposts')
+        .select('post_id,user_id').in('post_id',postIds):{data:[],error:null};
+      if(repostResult.error)throw repostResult.error;
       const savedResult=await client.from('zuzucord_social_bookmarks')
         .select('post_id').eq('user_id',userId);
       if(savedResult.error)throw savedResult.error;
@@ -92,6 +98,7 @@ export function SocialsHub({userId,owner,onMessage}:{
       }));
       if(!mounted.current)return;
       setPosts(records);setLikes(likesResult.data as Reaction[]||[]);
+      setReposts(repostResult.data as Reaction[]||[]);
       setSaved(new Set((savedResult.data||[]).map(x=>x.post_id)));
 
       setFollowing(new Set((followResult.data||[]).map(x=>x.followed_id)));
@@ -158,6 +165,31 @@ export function SocialsHub({userId,owner,onMessage}:{
       setLikes(old=>liked?old.filter(x=>!(x.post_id===postId&&x.user_id===userId)):
         [...old,{post_id:postId,user_id:userId}]);
     }catch(e){setError(getErr(e));}
+  };
+  const toggleRepost=async(postId:string)=>{
+    try{
+      const shared=reposts.some(x=>x.post_id===postId&&x.user_id===userId);
+      const result=shared?await client.from('zuzucord_social_reposts')
+        .delete().eq('post_id',postId).eq('user_id',userId):
+        await client.from('zuzucord_social_reposts').insert({post_id:postId,user_id:userId});
+      if(result.error)throw result.error;
+      setReposts(old=>shared?old.filter(x=>!(x.post_id===postId&&x.user_id===userId)):
+        [...old,{post_id:postId,user_id:userId}]);
+      onMessage(shared?'Reshare removed.':'Reshared to your Socials activity.');
+    }catch(error){setError(getErr(error));}
+  };
+  const viewCreator=async(id:string)=>{
+    setSelectedCreator(id);
+    setCreatorStatus('');
+    try{
+      const {data,error}=await client.from('zuzucord_profiles')
+        .select('display_name,status_text').eq('user_id',id).maybeSingle();
+      if(error)throw error;
+      setCreatorStatus(data?.status_text||'');
+      if(data?.display_name)setAuthors(old=>({...old,[id]:{
+        ...(old[id]||{username:'member'}),display_name:data.display_name
+      }}));
+    }catch(error){setError(getErr(error));}
   };
   const toggleSaved=async(postId:string)=>{
     try{
@@ -267,7 +299,9 @@ export function SocialsHub({userId,owner,onMessage}:{
       tab==='hidden'?hiddenCreators.has(p.author_id):hiddenCreators.has(p.author_id)?false:
       tab==='moments'?p.kind==='moment':
       tab==='following'?following.has(p.author_id)||p.author_id===userId:
-      tab==='saved'?saved.has(p.id):tab==='discover'?true:true);
+      tab==='saved'?saved.has(p.id):
+      tab==='reshares'?reposts.some(r=>r.post_id===p.id&&r.user_id===userId):
+      tab==='discover'?true:true);
     if(tab==='discover')list=list.filter(p=>p.author_id!==userId);
     if(search.trim()){
       const query=search.trim().toLowerCase();
@@ -277,7 +311,7 @@ export function SocialsHub({userId,owner,onMessage}:{
     if(sort==='popular')list=[...list].sort((a,b)=>
       likes.filter(x=>x.post_id===b.id).length-likes.filter(x=>x.post_id===a.id).length);
     return list;
-  },[posts,tab,following,saved,hiddenCreators,userId,search,authors,sort,likes]);
+  },[posts,tab,following,saved,hiddenCreators,reposts,userId,search,authors,sort,likes]);
   const creators=[...new Set(posts.map(p=>p.author_id).filter(id=>id!==userId))].slice(0,10);
   return <div className="socials-shell">
     <div className="socials-page-header">
@@ -288,15 +322,19 @@ export function SocialsHub({userId,owner,onMessage}:{
     </div>
     <div className="socials-tabs" role="tablist" aria-label="Social feeds">
       {([['feed','For you',Compass],['moments','Moments',Film],['following','Following',Users],
-        ['saved','Saved',Bookmark],['discover','Discover',UserPlus],['hidden','Hidden',X],
+        ['saved','Saved',Bookmark],['reshares','Reshares',Repeat2],
+        ['discover','Discover',UserPlus],['hidden','Hidden',X],
         ...(owner?[['reports','Reports',MoreHorizontal] as const]:[])] as const).map(([id,label,Icon])=>
         <button key={id} role="tab" aria-selected={tab===id}
           className={tab===id?'active':''} onClick={()=>setTab(id)}><Icon size={16}/>{label}</button>)}
     </div>
     <div className="socials-columns"><main className="socials-timeline">
       <form className="socials-composer" onSubmit={e=>void submit(e)}>
-        <div className="socials-composer-header"><div className="socials-avatar">YOU</div>
-          <div><strong>Share with ZuzuCord</strong><small>Visible to signed-in members</small></div></div>
+        <div className="socials-composer-header"><button type="button"
+          className="socials-avatar socials-avatar-button" onClick={onAccountSettings}
+          aria-label="Open my account settings">YOU</button>
+          <div><strong>Share with ZuzuCord</strong><small>Visible to signed-in members</small>
+            <button type="button" className="socials-my-account-link" onClick={onAccountSettings}>My account & settings</button></div></div>
         <textarea maxLength={kind==='moment'?500:2000} rows={3} value={content}
           placeholder={kind==='moment'?'Caption your Moment…':"What's new?"}
           onChange={e=>setContent(e.target.value)}/>
@@ -357,9 +395,13 @@ export function SocialsHub({userId,owner,onMessage}:{
         const own=post.author_id===userId;
         const commentList=comments[post.id]||[];
         return <article className="socials-post" key={post.id}>
-          <div className="socials-post-top"><div className="socials-avatar">
-            {(name(post.author_id).slice(0,2)||'ZU').toUpperCase()}</div>
-            <div className="socials-post-author"><strong>{name(post.author_id)}</strong>
+          <div className="socials-post-top"><button type="button"
+            className="socials-avatar socials-avatar-button"
+            aria-label={'View '+name(post.author_id)+' profile'}
+            onClick={()=>void viewCreator(post.author_id)}>
+            {(name(post.author_id).slice(0,2)||'ZU').toUpperCase()}</button>
+            <div className="socials-post-author"><button type="button" className="socials-author-link"
+              onClick={()=>void viewCreator(post.author_id)}>{name(post.author_id)}</button>
               <span>@{authors[post.author_id]?.username||'member'} · {ago(post.created_at)}
                 {post.kind==='moment'&&<b> MOMENT</b>}</span></div>
             {!own&&<button className="socials-follow" onClick={()=>void toggleFollow(post.author_id)}>
@@ -382,6 +424,11 @@ export function SocialsHub({userId,owner,onMessage}:{
               aria-label={liked?'Unlike post':'Like post'}><Heart size={17} fill={liked?'currentColor':'none'}/>{count}</button>
             <button onClick={()=>void openComments(post.id)}><MessageCircle size={17}/>
               {expanded.has(post.id)?'Hide replies':'Comments'}</button>
+            <button className={reposts.some(r=>r.post_id===post.id&&r.user_id===userId)?'reshared':''}
+              onClick={()=>void toggleRepost(post.id)}
+              aria-label={reposts.some(r=>r.post_id===post.id&&r.user_id===userId)?'Remove reshare':'Reshare post'}>
+              <Repeat2 size={17}/> {reposts.filter(r=>r.post_id===post.id).length}
+            </button>
             <button className={saved.has(post.id)?'saved':''} onClick={()=>void toggleSaved(post.id)}
               aria-label={saved.has(post.id)?'Remove bookmark':'Bookmark post'}>
               <Bookmark size={17} fill={saved.has(post.id)?'currentColor':'none'}/> {saved.has(post.id)?'Saved':'Save'}</button>
@@ -409,6 +456,30 @@ export function SocialsHub({userId,owner,onMessage}:{
           </div>}
         </article>;
       }))}
+      {selectedCreator && <div className="socials-profile-backdrop" onClick={()=>setSelectedCreator(null)}>
+        <section className="socials-profile-panel" role="dialog" aria-modal="true"
+          aria-label={name(selectedCreator)+' social profile'} onClick={event=>event.stopPropagation()}>
+          <button className="socials-profile-close" aria-label="Close profile"
+            onClick={()=>setSelectedCreator(null)}><X size={19}/></button>
+          <div className="socials-profile-banner"/>
+          <div className="socials-profile-avatar">{name(selectedCreator).slice(0,2).toUpperCase()}</div>
+          <h3>{name(selectedCreator)}</h3>
+          <p className="socials-profile-handle">@{authors[selectedCreator]?.username||'member'}</p>
+          <p className="socials-profile-status">{creatorStatus||'ZuzuCord community member'}</p>
+          <div className="socials-profile-counts">
+            <span><strong>{posts.filter(p=>p.author_id===selectedCreator).length}</strong> Recent posts</span>
+            <span><strong>{new Set(reposts.filter(r=>posts.some(p=>p.author_id===selectedCreator&&p.id===r.post_id)).map(r=>r.user_id)).size}</strong> Resharers</span>
+          </div>
+          {selectedCreator===userId?
+            <button className="button button-primary" onClick={()=>{setSelectedCreator(null);onAccountSettings();}}>
+              <Users size={16}/> My account settings</button>:
+            <button className="button button-primary" onClick={()=>void toggleFollow(selectedCreator)}>
+              <UserPlus size={16}/>{following.has(selectedCreator)?'Unfollow creator':'Follow creator'}</button>}
+          <button className="button button-subtle"
+            onClick={()=>{setTab('feed');setSearch(authors[selectedCreator]?.username||'');setSelectedCreator(null);}}>
+            View posts</button>
+        </section>
+      </div>}
       {visible.length>=100&&<p className="socials-limit">Showing the latest 100 posts. More feed pagination is planned.</p>}
     </main>
     <aside className="socials-discover">
