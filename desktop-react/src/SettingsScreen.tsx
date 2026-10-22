@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type CSSProperties } from 'react';
+import React, { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { BadgeCheck, Bell, Check, ChevronRight, Cloud, Copy, Crown, ExternalLink, Eye,
   EyeOff, Gem, Hash, KeyRound, LockKeyhole, LogOut, Monitor, Moon, Palette, RefreshCw,
   Shield, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Users, Volume2, X } from 'lucide-react';
@@ -38,6 +38,25 @@ const tabs: {group:string;links:{page:Page;label:string;icon:React.ElementType}[
   ]}
 ];
 const swatches=['#a978ff','#8798fc','#9fd8b9','#f2a6b9','#d3d3e0','#e3b685'];
+const gradientPresets = [
+  {name:'Amethyst',colors:['#28094b','#39175c','#080917','#1d0a35']},
+  {name:'Abyss',colors:['#06292f','#133a4f','#05090e','#0b182b']},
+  {name:'Ember',colors:['#38121a','#47231b','#0b080d','#221323']},
+  {name:'Carbon',colors:['#1d1d24','#2c3039','#020305','#15171d']},
+  {name:'Orchid',colors:['#250e3a','#572d5c','#0c0616','#270c34']}
+] as const;
+function colorFromCSS(source:string,keys:string[]):string|undefined {
+  for(const key of keys) {
+    const escaped=key.replace(/[.*+?^${}()|[\]\\]/g,'\\const swatches=['#a978ff','#8798fc','#9fd8b9','#f2a6b9','#d3d3e0','#e3b685'];');
+    const match=new RegExp(escaped+'\\s*:\\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})\\b','i').exec(source);
+    if(match){
+      const color=match[1];
+      return color.length===4?'#'+[...color.slice(1)].map(x=>x+x).join(''):color;
+    }
+  }
+  return undefined;
+}
+
 function Tile({title,description,action,children}:{
   title:string;description?:string;action?:React.ReactNode;children?:React.ReactNode
 }){return <div className="settings-tile"><div className="settings-tile-copy"><strong>{title}</strong>
@@ -67,6 +86,7 @@ export function SettingsScreen(props:Props) {
   const [draftName,setDraftName]=useState(profileName);
   const [draftStatus,setDraftStatus]=useState(profileStatus);
   const [draftTheme,setDraftTheme]=useState(appearance);
+  const themeFileRef=useRef<HTMLInputElement|null>(null);
   const [password,setPassword]=useState('');
   const [showPassword,setShowPassword]=useState(false);
   const [busy,setBusy]=useState(false);
@@ -121,6 +141,28 @@ export function SettingsScreen(props:Props) {
     onPreferences({...preferences,desktopFriendAlerts:enabled});
     notice(enabled?'Friend request alerts enabled on this device.':'Friend request alerts disabled.');
   };
+  const importPalette=async(file?:File)=>{
+    if(!file)return;
+    if(file.size>150000||!file.name.toLowerCase().endsWith('.css')){
+      notice('Choose a CSS theme file smaller than 150 KB.',true);return;
+    }
+    try {
+      const source=await file.text();
+      // Only read literal hex color variables. Never inject CSS or plugin code.
+      const accent=colorFromCSS(source,['--brand-experiment','--brand-500','--accent','--blurple']);
+      const background=colorFromCSS(source,['--background-primary','--bg-base-primary','--background-tertiary']);
+      const secondary=colorFromCSS(source,['--background-secondary','--bg-surface-raised']);
+      const middle=colorFromCSS(source,['--background-secondary-alt','--bg-surface-overlay']);
+      if(!accent&&!background&&!secondary&&!middle)throw Error('No supported hex color tokens found in this CSS theme.');
+      setDraftTheme(old=>({...old,
+        accent:accent||old.accent, gradient_start:secondary||old.gradient_start,
+        gradient_middle:middle||old.gradient_middle,gradient_end:background||old.gradient_end,
+        gradient_enabled:true
+      }));
+      notice('Theme colors imported to the preview. Press Save Appearance to apply them.');
+    }catch(error){notice(error instanceof Error?error.message:String(error),true);}
+    finally{if(themeFileRef.current)themeFileRef.current.value='';}
+  };
   const copy=async(value:string)=>{
     try{await navigator.clipboard.writeText(value);notice('Copied to clipboard.');}
     catch{notice('Could not access clipboard.',true);}
@@ -131,8 +173,10 @@ export function SettingsScreen(props:Props) {
   const pageTitle=tabs.flatMap(t=>t.links).find(link=>link.page===page)?.label||'Settings';
   const alias=username+'@zuzucord.com';
   const previewStyle={'--accent':draftTheme.accent,
-    '--gradient-a':draftTheme.gradient_start,
-    '--gradient-b':draftTheme.gradient_end} as CSSProperties;
+    '--gradient-a':draftTheme.gradient_start,'--gradient-middle':draftTheme.gradient_middle,
+    '--gradient-b':draftTheme.gradient_end,'--gradient-accent':draftTheme.gradient_accent,
+    '--gradient-angle':draftTheme.gradient_angle+'deg',
+    '--glow-position':draftTheme.glow_position+'%'} as CSSProperties;
   return <div className="settings-screen" role="dialog" aria-modal="true" aria-label="ZuzuCord settings">
     <aside className="settings-navigation">
       <div className="settings-brand"><div className="settings-brand-logo">Z</div>
@@ -267,10 +311,39 @@ export function SettingsScreen(props:Props) {
             <Tile title="Ambient gradients" description="Soft background blending behind channels.">
               <Toggle on={draftTheme.gradient_enabled} label="Ambient gradients"
                 change={v=>change('gradient_enabled',v)}/></Tile>
-            <div className="settings-color-fields"><label>Start color<input type="color"
-              value={draftTheme.gradient_start} onChange={e=>change('gradient_start',e.target.value)}/></label>
-              <label>End color<input type="color" value={draftTheme.gradient_end}
-                onChange={e=>change('gradient_end',e.target.value)}/></label></div>
+            <div className="settings-subsection-heading"><strong>Layered gradient studio</strong>
+              <small>Four colors, one smooth canvas</small></div>
+            <div className="settings-gradient-presets" role="group" aria-label="Gradient presets">
+              {gradientPresets.map(preset=><button type="button" key={preset.name}
+                className="settings-gradient-preset"
+                style={{background:'linear-gradient(135deg, '+preset.colors.join(', ')+')'}}
+                onClick={()=>setDraftTheme(old=>({...old,gradient_enabled:true,
+                  gradient_start:preset.colors[0],gradient_middle:preset.colors[1],
+                  gradient_end:preset.colors[2],gradient_accent:preset.colors[3]}))}>
+                <span>{preset.name}</span></button>)}
+            </div>
+            <div className="settings-color-fields settings-four-colors">
+              <label>Layer 1 · base<input type="color" value={draftTheme.gradient_start}
+                onChange={e=>change('gradient_start',e.target.value)}/></label>
+              <label>Layer 2 · middle<input type="color" value={draftTheme.gradient_middle}
+                onChange={e=>change('gradient_middle',e.target.value)}/></label>
+              <label>Layer 3 · depth<input type="color" value={draftTheme.gradient_end}
+                onChange={e=>change('gradient_end',e.target.value)}/></label>
+              <label>Layer 4 · highlight<input type="color" value={draftTheme.gradient_accent}
+                onChange={e=>change('gradient_accent',e.target.value)}/></label>
+            </div>
+            <label className="settings-range">Gradient angle <span>{draftTheme.gradient_angle}°</span>
+              <input type="range" min="0" max="360" step="5" value={draftTheme.gradient_angle}
+                onChange={e=>change('gradient_angle',Number(e.target.value))}/></label>
+            <label className="settings-range">Highlight position <span>{draftTheme.glow_position}%</span>
+              <input type="range" min="0" max="100" step="5" value={draftTheme.glow_position}
+                onChange={e=>change('glow_position',Number(e.target.value))}/></label>
+            <div className="settings-theme-import">
+              <div><strong>Vencord / BetterDiscord palette</strong><small>Import supported hex color tokens from a CSS theme. No plugins or external CSS will run.</small></div>
+              <button type="button" className="button button-subtle" onClick={()=>themeFileRef.current?.click()}>Import colors</button>
+              <input ref={themeFileRef} type="file" accept=".css,text/css" hidden
+                onChange={event=>void importPalette(event.target.files?.[0])}/>
+            </div>
             <label className="settings-range">Background glow <span>{draftTheme.glass_strength}%</span>
               <input type="range" min={0} max={100} value={draftTheme.glass_strength}
                 onChange={e=>change('glass_strength',Number(e.target.value))}/></label>
