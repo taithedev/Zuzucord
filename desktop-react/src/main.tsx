@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  ArrowLeft, Bell, Bot, Gem, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Copy,
+  ArrowLeft, Bell, Bot, Gem, Eye, EyeOff, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Copy,
   Crown, Ellipsis, Gift, Globe2, Hash, Heart, Home, LockKeyhole, LogOut, Maximize2,
   MessageCircle, MessagesSquare, Minus, Moon, Palette, PanelRightClose, PanelRightOpen,
   Plus, RefreshCw, Search, Send, Server as ServerIcon, Settings2, Shield,
@@ -67,12 +67,25 @@ function Auth({ onSuccess }: { onSuccess: (session: Session) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const normalizedName = identity.trim().toLowerCase().replace(/@zuzucord\.com$/,'');
+  const validName = /^[a-z0-9_]{3,24}$/.test(normalizedName);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError('');
     try {
       if (register) {
         await registerUsername(identity, password);
-        setRegister(false); setCreated(true); setPassword('');
+        const { data, error: authError } = await client.auth.signInWithPassword({
+          email: emailForLogin(identity), password
+        });
+        if (authError || !data.session) {
+          // Registration succeeded, but the configured provider may require
+          // the user to sign in separately. Do not try to register twice.
+          setRegister(false);setCreated(true);setPassword('');
+        } else {
+          await ensureAccount(data.session);
+          onSuccess(data.session);
+        }
       } else {
         const { data, error: authError } = await client.auth.signInWithPassword({
           email: emailForLogin(identity), password
@@ -89,21 +102,35 @@ function Auth({ onSuccess }: { onSuccess: (session: Session) => void }) {
     <div className="auth-decoration" aria-hidden="true"><div className="auth-glow" /><div className="auth-symbol">Z</div></div>
     <div className="auth-card">
       <div className="auth-mark"><Sparkles size={23} /> ZuzuCord <span>V3</span></div>
-      <h1>{register ? 'Join your community.' : 'Welcome back.'}</h1>
-      <p className="muted">{register ? 'Create your ZuzuCord ID to get started.' : 'Your servers, your friends, your space.'}</p>
+      <div className="auth-progress"><span className="current"/> <span className={register?'current':''}/> <small>{register?'CREATE YOUR ID':'SIGN IN'}</small></div>
+      <h1>{register ? 'Create your account.' : 'Welcome back.'}</h1>
+      <p className="muted">{register ?
+        'Choose a username and password. Your account works in the Windows app and on ZuzuCord.' :
+        'Sign in once to return to your communities and messages.'}</p>
       {created && <p className="success-line"><Check size={16} /> Account created. Sign in using your username and password.</p>}
       <form onSubmit={handleSubmit} className="auth-form">
-        <label>Username or ZuzuCord ID</label>
-        <input autoFocus required autoComplete="username" value={identity}
-          placeholder="username@zuzucord.com" onChange={e => setIdentity(e.target.value)} />
-        <label>Password</label>
-        <input type="password" autoComplete={register ? 'new-password' : 'current-password'}
-          required minLength={register ? 10 : 1} value={password}
-          placeholder={register ? '10 or more characters' : 'Enter your password'}
+        <label htmlFor="zuzu-login-name">{register?'Choose a username':'Username or ZuzuCord ID'}</label>
+        <input id="zuzu-login-name" autoFocus required autoComplete="username" value={identity}
+          minLength={register?3:1} maxLength={register?37:255}
+          placeholder={register?'your_username':'your_username or username@zuzucord.com'}
+          onChange={e => setIdentity(e.target.value)} />
+        {register && <div className={'auth-alias-preview '+(validName?'valid':'')}>
+          {validName ? <Check size={14}/> : <Shield size={14}/>}
+          {validName ? normalizedName+'@zuzucord.com':'3–24 letters, numbers or underscores'}</div>}
+        <label htmlFor="zuzu-login-password">Password</label>
+        <div className="auth-password-field"><input id="zuzu-login-password"
+          type={showPassword?'text':'password'}
+          autoComplete={register ? 'new-password' : 'current-password'}
+          required minLength={register ? 10 : 1} maxLength={128} value={password}
+          placeholder={register ? 'At least 10 characters' : 'Enter your password'}
           onChange={e => setPassword(e.target.value)} />
-        {register && <p className="tiny muted">Your ZuzuCord ID is a login alias, not a working email inbox. Without a recovery email, password reset by email is unavailable.</p>}
+          <button type="button" aria-label={showPassword?'Hide password':'Show password'}
+            title={showPassword?'Hide password':'Show password'} onClick={()=>setShowPassword(!showPassword)}>
+            {showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div>
+        {register && <p className="tiny muted auth-recovery-warning">Your ZuzuCord ID is a login alias, not a real email inbox.
+          Without an account recovery method, keep your password somewhere safe.</p>}
         {error && <p className="error-line" role="alert">{error}</p>}
-        <button className="button button-primary auth-submit" disabled={busy} type="submit">
+        <button className="button button-primary auth-submit" disabled={busy||(register&&!validName)} type="submit">
           {busy ? 'Working…' : register ? 'Create account' : 'Sign in'} <ChevronRight size={17} />
         </button>
       </form>
