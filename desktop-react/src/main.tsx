@@ -149,7 +149,9 @@ function App() {
   const [announcements, setAnnouncements] = useState<{id:string;title:string;content:string;created_at:string}[]>([]);
   const [botApps, setBotApps] = useState<{id:string;name:string;description:string}[]>([]);
   const [installedBots, setInstalledBots] = useState<string[]>([]);
-  const [updateRelease, setUpdateRelease] = useState<{tag:string;filename:string;downloadUrl:string;sha256:string|null;notes:string}|null>(null);
+  const [updateState, setUpdateState] = useState<UpdateState>({
+    phase:'idle',version:'',percent:0,message:''
+  });
   const [updating, setUpdating] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [profileStatus, setProfileStatus] = useState('');
@@ -399,26 +401,35 @@ function App() {
 
   useEffect(() => {
     if (!window.zuzuDesktop) return;
-    const unsubscribe = window.zuzuDesktop.onUpdateAvailable(release => setUpdateRelease(release));
-    return unsubscribe;
+    let active = true;
+    const unsubscribe = window.zuzuDesktop.onUpdateStatus(next => {
+      if (active) setUpdateState(next);
+    });
+    void window.zuzuDesktop.updateState().then(next => {
+      if (active) setUpdateState(next);
+    }).catch(showError);
+    return () => { active = false; unsubscribe(); };
   }, []);
   const checkUpdates = async () => {
-    if (!window.zuzuDesktop) { setStatus('Release updates are available in the packaged Windows application.'); return; }
+    if (!window.zuzuDesktop) {
+      setStatus('Automatic updates work in the installed Windows application.');
+      return;
+    }
     try {
       setUpdating(true);
-      const release = await window.zuzuDesktop.checkUpdates();
-      setUpdateRelease(release);
-      setStatus(release ? 'New ZuzuCord version available: ' + release.tag : 'ZuzuCord is up to date.');
-    } catch (error) { showError(error); } finally { setUpdating(false); }
+      const next = await window.zuzuDesktop.checkUpdates();
+      setUpdateState(next);
+      if (next.phase === 'current' || next.phase === 'error') setStatus(next.message);
+    } catch (error) { showError(error); }
+    finally { setUpdating(false); }
   };
-  const downloadUpdate = async () => {
-    if (!updateRelease || !window.zuzuDesktop) return;
+  const restartToUpdate = async () => {
+    if (updateState.phase !== 'ready' || !window.zuzuDesktop) return;
     try {
       setUpdating(true);
-      const result = await window.zuzuDesktop.downloadUpdate(updateRelease);
-      setStatus(result.note + ' File: ' + result.name);
-      setUpdateRelease(null);
-    } catch (error) { showError(error); } finally { setUpdating(false); }
+      await window.zuzuDesktop.restartToUpdate();
+      setStatus('Installing the update and restarting ZuzuCord…');
+    } catch (error) { showError(error); setUpdating(false); }
   };
   useEffect(() => {
     if (!selectedServer) { setBoostLevel(0); setInstalledBots([]); return; }
@@ -541,7 +552,10 @@ function App() {
       <span className="window-drag" />
       <div className="title-release">
         <button className="release-check" title="Check official v-prefixed GitHub releases" disabled={updating}
-          onClick={()=>void checkUpdates()}><RefreshCw size={13}/>{updateRelease?'Update '+updateRelease.tag:'Updates'}</button>
+          onClick={()=>void checkUpdates()}><RefreshCw size={13}/>
+          {updateState.phase === 'ready' ? 'Restart to update' :
+            updateState.phase === 'downloading' ? 'Updating ' + updateState.percent + '%' :
+            updateState.phase === 'checking' ? 'Checking…' : 'Check updates'}</button>
       </div>
       <div className="window-controls">
         <IconButton label="Minimize" onClick={() => void window.zuzuDesktop?.windowAction('minimize')}><Minus size={14} /></IconButton>
@@ -767,12 +781,21 @@ function App() {
           <div className="activity-note"><LockKeyhole size={16}/> Account and online activity come from ZuzuCord Supabase. Presence is visible only to accepted friends.</div>
         </aside>}
       </main>
-      {updateRelease && <div className="update-banner" role="status">
-        <div><RefreshCw size={17}/> <strong>ZuzuCord {updateRelease.tag} is available</strong>
-        <small>Official GitHub release with a v-prefixed version tag</small></div>
-        <button className="button button-primary" onClick={()=>void downloadUpdate()} disabled={updating}>
-          {updating?'Downloading…':'Download installer'}</button>
-        <IconButton label="Dismiss update" onClick={()=>setUpdateRelease(null)}><X size={16}/></IconButton>
+      {(updateState.phase === 'ready' || updateState.phase === 'downloading') &&
+      <div className="update-banner" role="status">
+        <div><RefreshCw size={17}/>
+          <strong>{updateState.phase === 'ready' ?
+            'ZuzuCord ' + updateState.version + ' is ready' :
+            'Updating ZuzuCord ' + updateState.version}</strong>
+          <small>{updateState.phase === 'ready' ?
+            'It installs automatically when you close the app.' :
+            'Downloading verified update · ' + updateState.percent + '%'}</small>
+        </div>
+        {updateState.phase === 'ready' ?
+          <button className="button button-primary" onClick={()=>void restartToUpdate()} disabled={updating}>
+            Restart & update</button> :
+          <div className="update-progress" aria-label={updateState.percent + '% downloaded'}>
+            <span style={{width:updateState.percent+'%'}}/></div>}
       </div>}
       {status && <div className="toast" role="status"><span>{status}</span><IconButton label="Dismiss" onClick={()=>setStatus('')}><X size={15}/></IconButton></div>}
       {modal && <Dialog heading={{
