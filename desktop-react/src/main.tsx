@@ -579,7 +579,11 @@ function App() {
     '--user-font-scale':String(clientPreferences.fontScale/100),
     '--accent': appearance.accent,
     '--gradient-a': appearance.gradient_start,
+    '--gradient-middle': appearance.gradient_middle,
     '--gradient-b': appearance.gradient_end,
+    '--gradient-accent': appearance.gradient_accent,
+    '--gradient-angle': appearance.gradient_angle+'deg',
+    '--glow-position': appearance.glow_position+'%',
     '--blur-strength': Math.round(appearance.glass_strength / 8) + 'px',
     '--glow-opacity': String(appearance.glass_strength / 100),
   } as CSSProperties;
@@ -740,10 +744,22 @@ function App() {
             {friends.filter(f => f.status === 'accepted').length === 0 && <div className="sidebar-empty">Add a friend to start a DM.</div>}
           </div>}
           <div className="sidebar-user">
-            <Avatar name={username || 'ZuzuCord'} />
-            <div className="user-details"><strong>{username || 'ZuzuCord'}</strong>
-              <span>{userRoles.includes('owner')?'Owner':userRoles.includes('developer')?'Developer':userRoles.includes('verified')?'Verified':
-                beta||userRoles.includes('beta_tester')?'Beta tester':'Member'} · Signed in</span></div>
+            <button type="button" className="sidebar-account-trigger"
+              title="Open your account and settings" aria-label="Open my account settings"
+              onClick={()=>openModal('settings')}
+              onContextMenu={event=>openContext(event,{title:'My account',actions:[
+                {id:'account',label:'Account settings',icon:<Settings2 size={16}/>,onClick:()=>openModal('settings')},
+                {id:'profile',label:'Edit profile',icon:<UserRound size={16}/>,onClick:()=>{
+                  setModalValue(profileName);setModalOther(profileStatus);openModal('profile');
+                }},
+                {id:'copy',label:'Copy user ID',icon:<Copy size={16}/>,onClick:()=>copyItem(me,'User ID')}
+              ]})}>
+              <Avatar name={username || 'ZuzuCord'} />
+              <span className="user-details"><strong>{profileName || username || 'ZuzuCord'}</strong>
+                <span>@{username||'member'} · {userRoles.includes('owner')?'Owner':userRoles.includes('developer')?'Developer':userRoles.includes('verified')?'Verified':
+                  beta||userRoles.includes('beta_tester')?'Beta tester':'Member'}</span></span>
+              <ChevronRight size={14} className="sidebar-account-chevron"/>
+            </button>
             <IconButton label="User settings" onClick={() => openModal('settings')}><Settings2 size={18} /></IconButton>
           </div>
         </section>
@@ -783,7 +799,7 @@ function App() {
             </div>
           </div>
           {view === 'socials' ? <SocialsHub userId={me} owner={userRoles.includes('owner')}
-            onMessage={setStatus}/> : view === 'friends' ? <>
+            onMessage={setStatus} onAccountSettings={()=>openModal('settings')}/> : view === 'friends' ? <>
             <div className="list-search"><Search size={19} /><input placeholder="Search your friends" value={query}
               onChange={e => setQuery(e.target.value)} /></div>
             <div className="list-label">{tab === 'online' ? 'PRESENCE' : tab === 'pending' ? 'PENDING REQUESTS' : 'ALL FRIENDS'} — {displayedFriends.length}</div>
