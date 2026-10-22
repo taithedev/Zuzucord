@@ -7,7 +7,9 @@ let windowRef;
 const smokeReport = process.env.ZUZUCORD_SMOKE_REPORT;
 if (smokeReport) {
   // Keep CI's test profile isolated from real accounts and preferences.
-  app.setPath('userData', path.join(path.dirname(smokeReport), 'smoke-profile'));
+  const profilePath = path.join(path.dirname(smokeReport), 'smoke-profile');
+  fs.mkdirSync(profilePath, { recursive: true });
+  app.setPath('userData', profilePath);
 }
 if (!app.requestSingleInstanceLock()) {
   app.quit();
