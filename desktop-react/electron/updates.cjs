@@ -111,4 +111,4 @@ function startAutoUpdates() {
   timer.unref();
 }
 module.exports = { currentState, checkForUpdates, restartAndInstall,
-  startAutoUpdates, validateRelease, newerVersion };
+  startAutoUpdates, validateRelease };
