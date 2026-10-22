@@ -11,7 +11,7 @@ alter table public.zuzucord_profiles
  drop constraint if exists zuzucord_profile_accent_safe;
 alter table public.zuzucord_profiles
  add constraint zuzucord_profile_banner_path_safe check (banner_path is null or
- banner_path ~ '^[0-9a-f-]{36}/(banner|avatar)-[0-9a-f-]{36}\\.(png|jpg|webp)$'),
+ banner_path ~ '^[0-9a-f-]{36}/(banner|avatar)-[0-9a-f-]{36}[.](png|jpg|webp)$'),
  add constraint zuzucord_profile_bio_safe check (char_length(bio)<=450),
  add constraint zuzucord_profile_pronouns_safe check (char_length(pronouns)<=40),
  add constraint zuzucord_profile_accent_safe check (profile_accent ~ '^#[0-9a-fA-F]{6}$');
