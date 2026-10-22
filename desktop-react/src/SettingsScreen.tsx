@@ -5,9 +5,11 @@ import { BadgeCheck, Bell, Check, ChevronRight, Cloud, Copy, Crown, ExternalLink
 import type { Session } from '@supabase/supabase-js';
 import { client, DEFAULT_APPEARANCE, type Appearance } from './api';
 import { type ClientPreferences, DEFAULT_CLIENT_PREFERENCES } from './clientPreferences';
+import { ProfileStudio } from './ProfileStudio';
+import { VoiceDiagnostics } from './VoiceDiagnostics';
 
 type Page = 'account'|'profile'|'security'|'privacy'|'notifications'|'appearance'|
-  'accessibility'|'updates'|'connections'|'server-tools';
+  'accessibility'|'updates'|'connections'|'server-tools'|'device'|'voice'|'about'|'developer-tools';
 type UpdateState = {phase:string;version:string;percent:number;message:string};
 type Props = {
   session:Session; username:string; roles:string[]; profileName:string; profileStatus:string;
@@ -17,6 +19,7 @@ type Props = {
   onProfile:(name:string,status:string)=>Promise<void>; onLogout:()=>Promise<void>;
   onCheckUpdates:()=>Promise<void>; onRestartUpdate:()=>Promise<void>;
   onOpenServerRoles:()=>void; onOpenCrystals:()=>void;
+  onOpenDeveloper:()=>void; onAvatarSaved:(url:string|null)=>void;
   hasServer:boolean; serverName:string;
 };
 const tabs: {group:string;links:{page:Page;label:string;icon:React.ElementType}[]}[] = [
@@ -29,12 +32,16 @@ const tabs: {group:string;links:{page:Page;label:string;icon:React.ElementType}[
   {group:'PREFERENCES',links:[
     {page:'notifications',label:'Notifications',icon:Bell},
     {page:'appearance',label:'Appearance & Themes',icon:Palette},
-    {page:'accessibility',label:'Accessibility',icon:Eye}
+    {page:'accessibility',label:'Accessibility',icon:Eye},
+    {page:'voice',label:'Voice & Microphone',icon:Volume2}
   ]},
   {group:'ZUZUCORD',links:[
     {page:'updates',label:'Updates',icon:RefreshCw},
+    {page:'device',label:'Windows & Network',icon:Monitor},
     {page:'connections',label:'Website Sync',icon:Cloud},
-    {page:'server-tools',label:'Server Tools',icon:Users}
+    {page:'server-tools',label:'Server Tools',icon:Users},
+    {page:'developer-tools',label:'Developer Portal',icon:KeyRound},
+    {page:'about',label:'Why ZuzuCord?',icon:Sparkles}
   ]}
 ];
 const swatches=['#a978ff','#8798fc','#9fd8b9','#f2a6b9','#d3d3e0','#e3b685'];
@@ -81,11 +88,10 @@ function SettingButton({children,onClick,disabled=false}:{
 export function SettingsScreen(props:Props) {
   const { session,username,roles,profileName,profileStatus,appearance,preferences,updateState,
     onClose,onAppearance,onImport,onPreferences,onProfile,onLogout,
-    onCheckUpdates,onRestartUpdate,onOpenServerRoles,onOpenCrystals,hasServer,serverName }=props;
+    onCheckUpdates,onRestartUpdate,onOpenServerRoles,onOpenCrystals,onOpenDeveloper,
+    onAvatarSaved,hasServer,serverName }=props;
   const [page,setPage]=useState<Page>('account');
   const [search,setSearch]=useState('');
-  const [draftName,setDraftName]=useState(profileName);
-  const [draftStatus,setDraftStatus]=useState(profileStatus);
   const [draftTheme,setDraftTheme]=useState(appearance);
   const themeFileRef=useRef<HTMLInputElement|null>(null);
   const [password,setPassword]=useState('');
@@ -94,19 +100,23 @@ export function SettingsScreen(props:Props) {
   const [feedback,setFeedback]=useState('');
   const [failed,setFailed]=useState(false);
   const [version,setVersion]=useState('');
+  const [startup,setStartup]=useState<{available:boolean;enabled:boolean}>({available:false,enabled:false});
+  const [network,setNetwork]=useState<{checkedAt:string;targets:Record<string,{
+    reachable:boolean;httpStatus?:number;latencyMs:number|null;error?:string
+  }> }|null>(null);
+  const [networkBusy,setNetworkBusy]=useState(false);
+  useEffect(()=>{
+    let active=true;
+    void window.zuzuDesktop?.getStartup().then(s=>{if(active)setStartup(s);})
+      .catch(()=>{});
+    return ()=>{active=false;};
+  },[]);
   useEffect(()=>{void window.zuzuDesktop?.version().then(setVersion).catch(()=>{});},[]);
   useEffect(()=>{setDraftTheme(appearance);},[appearance]);
   function change<K extends keyof Appearance>(key:K,value:Appearance[K]){
     setDraftTheme(current=>({...current,[key]:value}));
   }
   const notice=(message:string,error=false)=>{setFeedback(message);setFailed(error);};
-  const saveProfile=async()=>{
-    if(!draftName.trim()||draftName.trim().length>60)return notice('Display names must contain 1–60 characters.',true);
-    setBusy(true);
-    try{await onProfile(draftName.trim(),draftStatus.trim());notice('Your profile was saved.');}
-    catch(e){notice(e instanceof Error?e.message:String(e),true)}
-    finally{setBusy(false)}
-  };
   const changePassword=async(event:React.FormEvent)=>{
     event.preventDefault();
     if(password.length<10||password.length>128)return notice('Choose a password between 10 and 128 characters.',true);
@@ -132,6 +142,24 @@ export function SettingsScreen(props:Props) {
       setDraftTheme(remote);notice('Website colors imported. Press Save Appearance to keep them.');
     }catch(e){notice(e instanceof Error?e.message:String(e),true)}
     finally{setBusy(false)}
+  };
+  const changeStartup=async(enabled:boolean)=>{
+    try{
+      if(!window.zuzuDesktop)throw Error('Windows installation required to change auto-start.');
+      const next=await window.zuzuDesktop.setStartup(enabled);
+      setStartup(next);
+      notice(next.enabled?'ZuzuCord will open at Windows sign-in.':'ZuzuCord will no longer start automatically.');
+    }catch(e){notice(e instanceof Error?e.message:String(e),true);}
+  };
+  const testNetwork=async()=>{
+    setNetworkBusy(true);
+    try {
+      if(!window.zuzuDesktop)throw Error('Network diagnostics require the Windows application.');
+      const result=await window.zuzuDesktop.checkNetwork();
+      setNetwork(result);
+      notice('Connection checks completed.');
+    }catch(e){notice(e instanceof Error?e.message:String(e),true);}
+    finally{setNetworkBusy(false);}
   };
   const changeAlerts=async(enabled:boolean)=>{
     if(enabled){
@@ -169,6 +197,7 @@ export function SettingsScreen(props:Props) {
     catch{notice('Could not access clipboard.',true);}
   };
   const filtered=tabs.map(g=>({...g,links:g.links.filter(item=>
+    (item.page!=='developer-tools'||roles.includes('developer')) &&
     (item.label+' '+g.group).toLowerCase().includes(search.trim().toLowerCase()))}))
     .filter(g=>g.links.length>0);
   const pageTitle=tabs.flatMap(t=>t.links).find(link=>link.page===page)?.label||'Settings';
@@ -226,20 +255,10 @@ export function SettingsScreen(props:Props) {
             <SettingButton onClick={()=>setPage('profile')}>Edit Profile <ChevronRight size={15}/></SettingButton></Tile>
         </div>
       </Section>}
-      {page==='profile'&&<Section eyebrow="PERSONALIZATION" title="Your Profile"
-        description="Update your display name and status for friends and servers.">
-        <div className="settings-profile-editor"><div className="settings-profile-preview">
-          <div className="settings-profile-preview-banner"/><div className="settings-profile-preview-avatar">{username.slice(0,1).toUpperCase()}</div>
-          <h3>{draftName||username}</h3><small>@{username}</small>
-          <p>{draftStatus||'Set a status to let others know what you are doing.'}</p></div>
-          <div className="settings-form-fields"><label>Display name
-            <input value={draftName} maxLength={60} placeholder={username}
-              onChange={e=>setDraftName(e.target.value)}/></label>
-            <label>Status message<input value={draftStatus} maxLength={120}
-              placeholder="What are you working on?" onChange={e=>setDraftStatus(e.target.value)}/></label>
-            <button className="button button-primary" disabled={busy} onClick={()=>void saveProfile()}>
-              <Check size={16}/> Save Profile</button></div>
-        </div>
+      {page==='profile'&&<Section eyebrow="PROFILE CUSTOMIZATION" title="Make it yours"
+        description="Upload a profile photo or banner, choose custom colors, and edit your bio.">
+        <ProfileStudio userId={session.user.id} username={username}
+          onBasicSaved={onProfile} onAvatarSaved={onAvatarSaved}/>
       </Section>}
       {page==='security'&&<Section eyebrow="ACCOUNT PROTECTION" title="Password & Security"
         description="Manage your password and signed-in account safely.">
@@ -384,6 +403,61 @@ export function SettingsScreen(props:Props) {
         <label className="settings-range">Text size <span>{preferences.fontScale}%</span>
           <input type="range" min="85" max="125" step="5" value={preferences.fontScale}
             onChange={e=>onPreferences({...preferences,fontScale:Number(e.target.value)})}/></label>
+      </Section>}
+      {page==='voice'&&<Section eyebrow="VOICE CONTROLS" title="Voice & Microphone"
+        description="Check microphone permissions and test your input with a local audio sample.">
+        <VoiceDiagnostics/>
+      </Section>}
+      {page==='device'&&<Section eyebrow="WINDOWS DEVICE" title="Windows & Network"
+        description="Control startup behavior and check ZuzuCord connectivity.">
+        <div className="settings-stack">
+          <Tile title="Start with Windows" description="Off by default. If enabled, ZuzuCord launches after you sign in to Windows.">
+            <Toggle label="Launch at Windows sign-in" on={startup.enabled}
+              disabled={!startup.available} change={v=>void changeStartup(v)}/></Tile>
+          <Tile title="Windows permissions" description="Runs as a standard app. Microphone access is requested only when needed, and Windows protects administrator actions.">
+            <strong className="settings-right">Standard user</strong></Tile>
+        </div>
+        <div className="settings-note"><Shield size={18}/> ZuzuCord never requests permanent device-wide administrator access. Installation or individual system changes may require Windows approval.</div>
+        <div className="settings-network-card">
+          <div className="settings-network-title"><Monitor size={18}/>
+            <div><strong>Network diagnostics</strong>
+              <p>Tests the official ZuzuCord Supabase endpoint and the GitHub update service. Only connection status and round-trip times are displayed.</p>
+            </div></div>
+          <button type="button" className="button button-subtle" disabled={networkBusy}
+            onClick={()=>void testNetwork()}><RefreshCw size={15}/>
+            {networkBusy?'Checking…':'Test connections'}</button>
+          {network&&<div className="settings-network-results">
+            {Object.entries(network.targets).map(([name,result])=><div key={name}>
+              <span>{name==='supabase'?'Accounts & messaging':'Windows updates'}</span>
+              <strong className={result.reachable?'reachable':'unreachable'}>
+                {result.reachable?'Connected':'Unreachable'}
+                {result.latencyMs!=null?' · '+result.latencyMs+' ms':''}
+              </strong>
+            </div>)}
+            <small>Last tested: {new Date(network.checkedAt).toLocaleTimeString()}</small>
+          </div>}
+        </div>
+      </Section>}
+      {page==='developer-tools'&&roles.includes('developer')&&<Section
+        eyebrow="VERIFIED DEVELOPER" title="Developer Portal"
+        description="Manage bot applications, developer-issued Crystals and official announcements inside ZuzuCord.">
+        <div className="settings-note"><ShieldCheck size={19}/> Access is verified again with Supabase when you open the portal. A client-side badge alone never grants developer privileges.</div>
+        <button className="button button-primary" onClick={onOpenDeveloper}>
+          <KeyRound size={16}/> Open Developer Workspace</button>
+      </Section>}
+      {page==='about'&&<Section eyebrow="ABOUT ZUZUCORD" title="Why choose ZuzuCord?"
+        description="An independent community platform with Windows-first customization.">
+        <div className="settings-advantages">
+          <article><Palette size={20}/><strong>More control over the look</strong>
+            <p>OLED palettes, multi-layer gradients, accent colors, animated backgrounds and custom profile banners.</p></article>
+          <article><Users size={20}/><strong>Your own community spaces</strong>
+            <p>Channels, server roles, custom bots and a developer area managed in the same app.</p></article>
+          <article><Sparkles size={20}/><strong>Crystals and Socials</strong>
+            <p>Non-purchasable server boosts, personal posts and Moments, bookmarks and creator activity.</p></article>
+          <article><RefreshCw size={20}/><strong>Install once, update inside Windows</strong>
+            <p>Newer official installer releases download in the background and install on exit or restart.</p></article>
+        </div>
+        <p className="tiny muted">ZuzuCord is not affiliated with Discord. These are project features, not a claim that ZuzuCord is safer or better for everyone. Voice calling and feature parity are still under development.</p>
       </Section>}
       {page==='updates'&&<Section eyebrow="DESKTOP APP" title="Updates"
         description="ZuzuCord installs once and downloads future official updates automatically.">
