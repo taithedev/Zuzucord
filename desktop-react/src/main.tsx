@@ -823,8 +823,7 @@ function App() {
                   {id:'message-id',label:'Copy message ID',icon:<Hash size={16}/>,
                     onClick:()=>copyItem(message.id,'Message ID'),dividerBefore:true},
                   {id:'author-id',label:'Copy author ID',icon:<Users size={16}/>,
-                    onClick:()=>copyItem('author_id' in message ?
-                      String(message.author_id):String(message.sender_id),'Author ID')}
+                    onClick:()=>copyItem(String(message.author_id),'Author ID')}
                 ]})}>
                 <Avatar name={getAuthorName(message)} size="normal"
                   color={message.bot_name || message.external_bot_id ? '#9275ff' : undefined} />
@@ -952,22 +951,9 @@ function App() {
         invite:'Invite people',profile:'Your profile',bot:'ZuzuBot settings',
         announcements:'ZuzuCord Official',boost:'Crystals & Server Perks', 'install-bot':'Server bot applications',
         roles:'Server roles & permissions','owner-tools':'ZuzuCord Owner tools'
-      }[modal]} subtitle={modal === 'settings' ? 'Make ZuzuCord yours — colors, glass, gradients and motion.' : undefined}
-        onClose={() => setModal(null)} wide={modal === 'settings' || modal === 'roles'}>
-        {modal === 'settings' ? <AppearanceEditor value={appearance}
-          onSave={async next => { await saveAppearance(next); setModal(null); }}
-          onImport={async () => {
-            if (!me) return null;
-            try {
-              const remote = await appApi.getBeta(me);
-              if (!remote) throw Error('No synced website theme found yet.');
-              const next = { ...validateAppearance(remote), compact: appearance.compact };
-              setAppearance(next);
-              setStatus('Imported your production website theme and gradients.');
-              return next;
-            } catch (error) { showError(error); return null; }
-          }} />
-        : modal === 'announcements' ? <div className="modal-body official-inbox">
+      }[modal]}
+        onClose={() => setModal(null)} wide={modal === 'roles'}>
+        {modal === 'announcements' ? <div className="modal-body official-inbox">
           <div className="official-header"><ShieldCheck size={26}/><div><strong>Official ZuzuCord account</strong><span>Verified · Read-only platform announcements</span></div></div>
           <p className="tiny muted">These developer-published messages appear for every ZuzuCord account. Replies are disabled.</p>
           {announcements.length===0 ? <p className="muted">No official announcements yet.</p> :
