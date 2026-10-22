@@ -15,6 +15,6 @@
 !macroend
 !macro customWelcomePage
   !define MUI_WELCOMEPAGE_TITLE "ZuzuCord Setup"
-  !define MUI_WELCOMEPAGE_TEXT "Install or repair ZuzuCord for Windows. If an existing install is detected, you can also choose Uninstall.$\r$\n$\r$\nYour account data and saved preferences are preserved during repair."
+  !define MUI_WELCOMEPAGE_TEXT "Install ZuzuCord for Windows. Repair or uninstall an older version if detected.$\r$\n$\r$\nNewer official versions are downloaded inside ZuzuCord and installed when you close or restart it.$\r$\n$\r$\nLaunch at Windows startup is OFF unless you enable it later in Settings. ZuzuCord installs for your Windows user and does not require permanent administrator access.$\r$\n$\r$\nRepair preserves your ZuzuCord account and personal settings."
   !insertmacro MUI_PAGE_WELCOME
 !macroend
