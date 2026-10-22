@@ -38,8 +38,9 @@ ipcMain.handle('win:action', (_ev, action) => {
   if (action === 'close') windowRef.close();
 });
 ipcMain.handle('app:version', () => app.getVersion());
-ipcMain.handle('update:check', () => updates.lookupUpdate());
-ipcMain.handle('update:download', (_event, release) => updates.downloadUpdate(release));
+ipcMain.handle('update:state', () => updates.currentState());
+ipcMain.handle('update:check', () => updates.checkForUpdates());
+ipcMain.handle('update:install', () => updates.restartAndInstall());
 function makeWindow() {
   nativeTheme.themeSource = 'dark';
   windowRef = new BrowserWindow({
@@ -56,11 +57,9 @@ function makeWindow() {
   });
   windowRef.once('ready-to-show', () => {
     windowRef?.show();
-    if (app.isPackaged) {
-      updates.lookupUpdate()
-        .then(release => { if (release && !windowRef?.isDestroyed()) windowRef?.webContents.send('update:available', release); })
-        .catch(() => { /* manual Update check can show network errors */ });
-    }
+    updates.startAutoUpdates();
+    const updateState = updates.currentState();
+    if (updateState.phase !== 'idle') windowRef?.webContents.send('update:status', updateState);
   });
   if (process.env.ZUZUCORD_DEV_URL && !app.isPackaged) windowRef.loadURL(process.env.ZUZUCORD_DEV_URL);
   else windowRef.loadFile(path.join(__dirname, '../dist/index.html'));
