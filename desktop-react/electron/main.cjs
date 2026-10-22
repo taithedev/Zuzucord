@@ -41,6 +41,51 @@ ipcMain.handle('app:version', () => app.getVersion());
 ipcMain.handle('update:state', () => updates.currentState());
 ipcMain.handle('update:check', () => updates.checkForUpdates());
 ipcMain.handle('update:install', () => updates.restartAndInstall());
+const fixedTargets = Object.freeze({
+  supabase: 'https://wfqudstuncdldsvxqveu.supabase.co/auth/v1/health',
+  releases: 'https://api.github.com/repos/taithedev/Zuzucord/releases/latest'
+});
+ipcMain.handle('system:startup:get', () => {
+  if (process.platform !== 'win32' || !app.isPackaged) return { available:false, enabled:false };
+  return { available:true, enabled:app.getLoginItemSettings().openAtLogin };
+});
+ipcMain.handle('system:startup:set', (_event, enabled) => {
+  if (typeof enabled !== 'boolean') throw Error('Invalid startup preference');
+  if (process.platform !== 'win32' || !app.isPackaged) throw Error('Requires installed Windows app');
+  app.setLoginItemSettings({openAtLogin:enabled,enabled,name:'ZuzuCord'});
+  return {available:true,enabled:app.getLoginItemSettings().openAtLogin};
+});
+ipcMain.handle('system:network', async () => {
+  const targets = {};
+  for (const [name,url] of Object.entries(fixedTargets)) {
+    const start=Date.now();
+    try {
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),6500);
+      try {
+        const response=await require('electron').net.fetch(url,{
+          method:'GET',signal:controller.signal,
+          headers:{'User-Agent':'ZuzuCord-Network-Diagnostics'}
+        });
+        targets[name]={reachable:true,httpStatus:response.status,latencyMs:Date.now()-start};
+      } finally {clearTimeout(timeout);}
+    } catch(error) {
+      targets[name]={reachable:false,latencyMs:null,
+        error:error?.name==='AbortError'?'Timed out':'Connection failed'};
+    }
+  }
+  return { checkedAt:new Date().toISOString(),targets };
+});
+ipcMain.handle('system:openExternal', async (_event, target) => {
+  // Never accept an arbitrary renderer-supplied URL or local file path.
+  const allowlist={
+    releases:'https://github.com/taithedev/Zuzucord/releases',
+    docs:'https://github.com/taithedev/Zuzucord/blob/main/README.md'
+  };
+  if (!Object.prototype.hasOwnProperty.call(allowlist,target)) throw Error('Unsupported destination');
+  await shell.openExternal(allowlist[target]);
+  return true;
+});
 function makeWindow() {
   nativeTheme.themeSource = 'dark';
   windowRef = new BrowserWindow({
