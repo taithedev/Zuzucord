@@ -1,4 +1,4 @@
-import {useEffect,useState,type ChangeEvent,type FormEvent} from 'react';
+import {useEffect,useState,type CSSProperties,type ChangeEvent,type FormEvent} from 'react';
 import {Camera,Check,Image as ImageIcon,Palette,Save,Shield} from 'lucide-react';
 import {client} from './api';
 
@@ -112,7 +112,7 @@ export function ProfileStudio({userId,username,onBasicSaved,onAvatarSaved}:{
     }finally{setBusy(false);}
   };
   return <form className="profile-studio" onSubmit={e=>void save(e)}>
-    <div className="profile-studio-preview" style={{'--profile-accent':profile.profile_accent} as React.CSSProperties}>
+    <div className="profile-studio-preview" style={{'--profile-accent':profile.profile_accent} as CSSProperties}>
       <div className="profile-studio-banner" style={bannerPreview?{backgroundImage:'url('+JSON.stringify(bannerPreview)+')'}:undefined}>
         <label className="profile-studio-banner-upload"><ImageIcon size={15}/> Change banner
           <input type="file" accept="image/png,image/jpeg,image/webp" hidden
