@@ -13,7 +13,12 @@ function Run-Checked($file, $arguments, $seconds = 120) {
     Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
     throw "Process timed out: $file"
   }
-  if ($process.ExitCode -ne 0) { throw "Process failed ($($process.ExitCode)): $file" }
+  if ($process.ExitCode -ne 0) {
+    if (Test-Path $env:ZUZUCORD_SMOKE_REPORT) {
+      Write-Host (Get-Content $env:ZUZUCORD_SMOKE_REPORT -Raw)
+    }
+    throw "Process failed ($($process.ExitCode)): $file"
+  }
 }
 
 # /D must be last and unquoted in NSIS's command line.

@@ -21,6 +21,13 @@ function verifyLaunch(window, reportPath) {
       const result = await window.webContents.executeJavaScript(`(async () => {
         const deadline = Date.now() + 20000;
         while (Date.now() < deadline) {
+          const notice = document.querySelector('.notice-card');
+          if (notice) {
+            const consent = notice.querySelector('input[type=checkbox]');
+            if (consent && !consent.checked) consent.click();
+            const next = notice.querySelector('button');
+            if (next && !next.disabled) next.click();
+          }
           if (document.querySelector('#zuzu-login-name') && document.querySelector('#zuzu-login-password')) {
             const bridge = window.zuzuDesktop;
             if (!bridge) throw Error('Desktop preload bridge is missing');
@@ -35,7 +42,7 @@ function verifyLaunch(window, reportPath) {
           }
           await new Promise(resolve => setTimeout(resolve, 100));
         }
-        throw Error('Sign-in screen did not render');
+        throw Error('Sign-in screen did not render: ' + document.body.innerText.slice(0, 700));
       })()`);
       finish(result.signIn && result.version === app.getVersion(), result);
     } catch (error) { finish(false, String(error.message || error)); }
