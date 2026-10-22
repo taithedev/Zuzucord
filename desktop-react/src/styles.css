@@ -747,3 +747,59 @@ background:#2e2238;color:#f1e4f5;border:1px solid #ffffff22;
 padding:10px;border-radius:8px;font-size:11px}
 .socials-report-actions button:hover{border-color:var(--accent)}
 .socials-report-actions button.danger{color:#ffb6c6;border-color:#ce67794d}
+
+/* Layered themes / account interaction / calm premium OLED motion */
+.zuzu-app.has-gradient::before {
+  background:
+    radial-gradient(ellipse at var(--glow-position,25%) 14%,
+      color-mix(in srgb,var(--gradient-a) 84%,transparent),transparent 57%),
+    radial-gradient(ellipse at 86% 88%,
+      color-mix(in srgb,var(--gradient-middle,#160c22) 75%,transparent),transparent 60%),
+    radial-gradient(ellipse at 67% 15%,
+      color-mix(in srgb,var(--gradient-accent,#09101b) 65%,transparent),transparent 49%),
+    linear-gradient(var(--gradient-angle,135deg),var(--gradient-b),transparent 62%);
+  opacity:calc(.3 + var(--glow-opacity) * .65);
+}
+.zuzu-app .realm-rail{background:color-mix(in srgb,var(--base) 88%,var(--gradient-middle,#150a20))}
+.zuzu-app .sidebar{background:color-mix(in srgb,var(--surface) 89%,var(--gradient-a))}
+.zuzu-app .main-pane{background:color-mix(in srgb,var(--surface-deep) 88%,var(--gradient-b))}
+.zuzu-app .activity-panel{background:color-mix(in srgb,var(--surface) 92%,var(--gradient-accent,#090811))}
+.sidebar-account-trigger{display:flex;align-items:center;flex:1;min-width:0;gap:9px;border:1px solid transparent;
+ color:inherit;text-align:left;padding:7px 6px;border-radius:9px;background:transparent;cursor:pointer}
+.sidebar-account-trigger:hover,.sidebar-account-trigger:focus-visible{
+ background:color-mix(in srgb,var(--accent) 16%,#1d1427);border-color:#ffffff24}
+.sidebar-account-trigger .user-details{min-width:0;flex:1;display:grid;gap:4px;overflow:hidden}
+.sidebar-account-trigger .user-details strong,.sidebar-account-trigger .user-details>span{
+ white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.sidebar-account-chevron{flex:none;color:#9d91a9;opacity:.65}
+.sidebar-account-trigger:hover .sidebar-account-chevron{opacity:1;color:var(--accent)}
+.settings-subsection-heading{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:baseline;margin-top:5px}
+.settings-subsection-heading strong{font-size:12px}
+.settings-subsection-heading small{font-size:10px;color:#9e93a9}
+.settings-gradient-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.settings-gradient-preset{display:flex;align-items:flex-end;min-height:62px;color:white;
+ border:1px solid #ffffff3a;border-radius:10px;padding:8px;position:relative;overflow:hidden;text-align:left}
+.settings-gradient-preset::before{content:"";inset:0;position:absolute;background:linear-gradient(transparent,#0008)}
+.settings-gradient-preset span{position:relative;font-size:10px;font-weight:700;text-shadow:0 2px 8px #000}
+.settings-gradient-preset:hover,.settings-gradient-preset:focus-visible{outline:2px solid #ddd;outline-offset:2px}
+.settings-four-colors label{min-width:0}
+.settings-theme-import{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;
+ padding:14px;border:1px solid #584668;border-radius:10px;background:#211a2a}
+.settings-theme-import>div{display:grid;gap:6px;flex:1;min-width:180px}
+.settings-theme-import strong{font-size:11px}
+.settings-theme-import small{font-size:10px;color:#afa3be;line-height:1.6}
+.settings-miniapp.on{background:
+  radial-gradient(ellipse at var(--glow-position,25%) 14%,var(--gradient-a),transparent 72%),
+  radial-gradient(ellipse at 92% 90%,var(--gradient-middle),transparent 68%),
+  radial-gradient(ellipse at 70% 8%,var(--gradient-accent),transparent 65%),
+  linear-gradient(var(--gradient-angle,135deg),var(--gradient-b),#07050d)}
+.zuzu-app button:not(:disabled){transition:background-color .13s ease,border-color .13s ease,color .13s ease,box-shadow .13s ease}
+.zuzu-app .socials-post{transition:border-color .17s ease,transform .17s ease,box-shadow .17s ease}
+.zuzu-app .socials-post:hover{border-color:#ffffff36;box-shadow:0 8px 35px #0002}
+.zuzu-app .socials-avatar{transition:transform .17s ease,filter .17s ease}
+.zuzu-app button:hover>.socials-avatar{transform:scale(1.045)}
+@media(max-width:600px){.settings-gradient-presets{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){
+ .zuzu-app button:not(:disabled),.zuzu-app .socials-post,.zuzu-app .socials-avatar{transition:none}
+ .zuzu-app.has-motion.has-gradient::before{animation:none}
+}
