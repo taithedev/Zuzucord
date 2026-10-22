@@ -5,7 +5,7 @@ import { Bookmark, Camera, Check, ChevronDown, Clock3, Compass, Copy, Film, Hear
 import { client } from './api';
 
 type SocialKind = 'post'|'moment';
-type Tab = 'feed'|'moments'|'following'|'saved'|'discover'|'hidden';
+type Tab = 'feed'|'moments'|'following'|'saved'|'discover'|'hidden'|'reports';
 type Post = {id:string;author_id:string;kind:SocialKind;content:string;media_path:string|null;
   media_type:'image'|'video'|null;created_at:string};
 type Reaction = {post_id:string;user_id:string};
@@ -40,6 +40,7 @@ export function SocialsHub({userId,owner,onMessage}:{
   const [saved,setSaved]=useState<Set<string>>(new Set());
   const [following,setFollowing]=useState<Set<string>>(new Set());
   const [hiddenCreators,setHiddenCreators]=useState<Set<string>>(new Set());
+  const [reports,setReports]=useState<{id:string;post_id:string;reporter_id:string;reason:string;created_at:string}[]>([]);
   const [authors,setAuthors]=useState<Record<string,Author>>({});
   const [mediaUrls,setMediaUrls]=useState<Record<string,string>>({});
   const [comments,setComments]=useState<Record<string,Comment[]>>({});
@@ -95,10 +96,16 @@ export function SocialsHub({userId,owner,onMessage}:{
 
       setFollowing(new Set((followResult.data||[]).map(x=>x.followed_id)));
       setHiddenCreators(new Set((hiddenResult.data||[]).map(x=>x.hidden_user_id)));
+      if(owner){
+        const {data:reportsData}=await client.from('zuzucord_social_reports')
+          .select('id,post_id,reporter_id,reason,created_at')
+          .is('reviewed_at',null).order('created_at',{ascending:false}).limit(100);
+        if(mounted.current)setReports(reportsData||[]);
+      }
       setAuthors(nameMap);setMediaUrls(Object.fromEntries(signed));
     }catch(e){if(mounted.current)setError(getErr(e));}
     finally{if(mounted.current)setLoading(false);}
-  },[userId]);
+  },[userId,owner]);
   useEffect(()=>{
     mounted.current=true;void load();
     const interval=window.setInterval(()=>{void load();},60000);
@@ -173,6 +180,16 @@ export function SocialsHub({userId,owner,onMessage}:{
       if(result.error)throw result.error;
       setHiddenCreators(old=>{const n=new Set(old);if(exists)n.delete(target);else n.add(target);return n;});
       onMessage(exists?'Creator restored to your feed.':'Creator hidden from your feed.');
+    }catch(e){setError(getErr(e));}
+  };
+  const resolveReport=async(reportId:string)=>{
+    if(!owner)return;
+    try{
+      const {error:reviewError}=await client.from('zuzucord_social_reports')
+        .update({reviewed_at:new Date().toISOString()}).eq('id',reportId);
+      if(reviewError)throw reviewError;
+      setReports(old=>old.filter(r=>r.id!==reportId));
+      onMessage('Report marked reviewed.');
     }catch(e){setError(getErr(e));}
   };
   const reportPost=async(postId:string)=>{
@@ -271,7 +288,8 @@ export function SocialsHub({userId,owner,onMessage}:{
     </div>
     <div className="socials-tabs" role="tablist" aria-label="Social feeds">
       {([['feed','For you',Compass],['moments','Moments',Film],['following','Following',Users],
-        ['saved','Saved',Bookmark],['discover','Discover',UserPlus],['hidden','Hidden',X]] as const).map(([id,label,Icon])=>
+        ['saved','Saved',Bookmark],['discover','Discover',UserPlus],['hidden','Hidden',X],
+        ...(owner?[['reports','Reports',MoreHorizontal] as const]:[])] as const).map(([id,label,Icon])=>
         <button key={id} role="tab" aria-selected={tab===id}
           className={tab===id?'active':''} onClick={()=>setTab(id)}><Icon size={16}/>{label}</button>)}
     </div>
@@ -309,7 +327,23 @@ export function SocialsHub({userId,owner,onMessage}:{
       </div>
       {error&&<div className="socials-error" role="alert">{error}
         <button onClick={()=>setError('')} aria-label="Dismiss error"><X size={14}/></button></div>}
-      {visible.length===0?<div className="socials-empty"><Compass size={34}/>
+      {tab==='reports' && owner && <section className="socials-reports">
+        <h3>Moderation reports <span>{reports.length} pending</span></h3>
+        {reports.length===0?<p>No unresolved reports.</p>:
+          reports.map(report=><article key={report.id}>
+            <div><strong>Post {report.post_id.slice(0,8)}</strong><span>{ago(report.created_at)}</span></div>
+            <p>{report.reason}</p>
+            <div className="socials-report-actions">
+              <button onClick={()=>void resolveReport(report.id)}><Check size={15}/> Mark reviewed</button>
+              <button onClick={()=>{setTab('feed');setSearch(report.post_id);}}>
+                <Compass size={15}/> View feed</button>
+              {posts.find(p=>p.id===report.post_id) &&
+                <button onClick={()=>void deletePost(posts.find(p=>p.id===report.post_id)!)} className="danger">
+                  <Trash2 size={15}/> Delete reported post</button>}
+            </div>
+          </article>)}
+      </section>}
+      {tab!=='reports' && (visible.length===0?<div className="socials-empty"><Compass size={34}/>
         <h3>{loading?'Loading Socials…':tab==='saved'?'Nothing saved yet.':'Nothing here yet.'}</h3>
         <p>{loading?'Loading recent posts and Moments from Supabase.':
           tab==='following'?'Follow other creators to see their posts here.':
@@ -374,7 +408,7 @@ export function SocialsHub({userId,owner,onMessage}:{
             </form>
           </div>}
         </article>;
-      })}
+      )})}
       {visible.length>=100&&<p className="socials-limit">Showing the latest 100 posts. More feed pagination is planned.</p>}
     </main>
     <aside className="socials-discover">
