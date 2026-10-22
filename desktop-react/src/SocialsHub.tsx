@@ -335,8 +335,8 @@ export function SocialsHub({userId,owner,onMessage}:{
             <p>{report.reason}</p>
             <div className="socials-report-actions">
               <button onClick={()=>void resolveReport(report.id)}><Check size={15}/> Mark reviewed</button>
-              <button onClick={()=>{setTab('feed');setSearch(report.post_id);}}>
-                <Compass size={15}/> View feed</button>
+              <button onClick={()=>{setTab('feed');setSearch('');}}>
+                <Compass size={15}/> Return to feed</button>
               {posts.find(p=>p.id===report.post_id) &&
                 <button onClick={()=>void deletePost(posts.find(p=>p.id===report.post_id)!)} className="danger">
                   <Trash2 size={15}/> Delete reported post</button>}
@@ -408,7 +408,7 @@ export function SocialsHub({userId,owner,onMessage}:{
             </form>
           </div>}
         </article>;
-      )})}
+      }))}
       {visible.length>=100&&<p className="socials-limit">Showing the latest 100 posts. More feed pagination is planned.</p>}
     </main>
     <aside className="socials-discover">
