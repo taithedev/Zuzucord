@@ -47,8 +47,9 @@ const gradientPresets = [
 ] as const;
 function colorFromCSS(source:string,keys:string[]):string|undefined {
   for(const key of keys) {
-    const escaped=key.replace(/[.*+?^${}()|[\]\\]/g,'\\const swatches=['#a978ff','#8798fc','#9fd8b9','#f2a6b9','#d3d3e0','#e3b685'];');
-    const match=new RegExp(escaped+'\\s*:\\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})\\b','i').exec(source);
+    // Keys are fixed, known CSS variable names (no arbitrary regex input).
+    const regex=new RegExp(key+'\\s*:\\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})(?![0-9a-fA-F])','i');
+    const match=regex.exec(source);
     if(match){
       const color=match[1];
       return color.length===4?'#'+[...color.slice(1)].map(x=>x+x).join(''):color;
