@@ -749,7 +749,7 @@ function App() {
               onClick={()=>openModal('settings')}
               onContextMenu={event=>openContext(event,{title:'My account',actions:[
                 {id:'account',label:'Account settings',icon:<Settings2 size={16}/>,onClick:()=>openModal('settings')},
-                {id:'profile',label:'Edit profile',icon:<UserRound size={16}/>,onClick:()=>{
+                {id:'profile',label:'Edit profile',icon:<UsersRound size={16}/>,onClick:()=>{
                   setModalValue(profileName);setModalOther(profileStatus);openModal('profile');
                 }},
                 {id:'copy',label:'Copy user ID',icon:<Copy size={16}/>,onClick:()=>copyItem(me,'User ID')}
