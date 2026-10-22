@@ -19,6 +19,7 @@ import { ServerRolesEditor } from './ServerRolesEditor';
 import { OwnerConsole } from './OwnerConsole';
 import { CrystalCenter } from './CrystalCenter';
 import { SettingsScreen } from './SettingsScreen';
+import { DeveloperWorkspace } from './DeveloperWorkspace';
 import { SocialsHub } from './SocialsHub';
 import { ContextMenu, type MenuDetails } from './ContextMenu';
 import { readClientPreferences, saveClientPreferences, type ClientPreferences } from './clientPreferences';
@@ -27,7 +28,7 @@ import './styles.css';
 type View = 'friends' | 'channel' | 'dm' | 'socials';
 type FriendTab = 'all' | 'pending' | 'online';
 type ModalName = 'settings' | 'new-server' | 'join-server' | 'new-channel' | 'add-friend'
-  | 'members' | 'invite' | 'profile' | 'bot' | 'announcements' | 'boost' | 'install-bot' | 'roles' | 'owner-tools' | null;
+  | 'members' | 'invite' | 'profile' | 'bot' | 'announcements' | 'boost' | 'install-bot' | 'roles' | 'owner-tools' | 'developer' | null;
 type Friend = { id: string; username: string; status: FriendRequest['status']; outgoing: boolean; requestId: string };
 const dateTime = (value: string) => new Date(value).toLocaleString(undefined, {
   month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
@@ -43,10 +44,10 @@ function IconButton({ label, children, onClick, active, className }: {
     className={'icon-button ' + (active ? 'active ' : '') + (className || '')}
     onClick={onClick}>{children}</button>;
 }
-function Avatar({ name, size = 'normal', color }: { name: string; size?: 'tiny' | 'normal' | 'large'; color?: string }) {
+function Avatar({ name, size = 'normal', color, src }: { name: string; size?: 'tiny' | 'normal' | 'large'; color?: string; src?: string|null }) {
   const shade = color || '#7b4fa1';
   return <span className={'avatar avatar-' + size} style={{ background: 'linear-gradient(145deg, ' + shade + ', #222033)' }}
-    aria-label={name}>{initials(name)}</span>;
+    aria-label={name}>{src?<img src={src} alt="" className="avatar-picture"/>:initials(name)}</span>;
 }
 function Dialog({ heading, subtitle, children, onClose, wide = false }: {
   heading: string; subtitle?: string; children: React.ReactNode; onClose: () => void; wide?: boolean
@@ -189,6 +190,7 @@ function App() {
   const [updating, setUpdating] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [profileStatus, setProfileStatus] = useState('');
+  const [profileAvatar,setProfileAvatar]=useState<string|null>(null);
   const [botEnabled, setBotEnabled] = useState(true);
   const [serverPermissions, setServerPermissions] = useState({manage_channels:false,manage_members:false,manage_bots:false});
   const messagesBottom = useRef<HTMLDivElement | null>(null);
@@ -302,7 +304,13 @@ function App() {
     if (!me) return;
     let live = true;
     Promise.all([loadServers(), loadFriends(), appApi.getProfile(me)]).then(([,,profile]) => {
-      if (live && profile) { setProfileName(profile.display_name); setProfileStatus(profile.status_text); }
+      if (live && profile) {
+        setProfileName(profile.display_name);setProfileStatus(profile.status_text);
+        if(profile.avatar_url) {
+          void client.storage.from('zuzucord-profile-media').createSignedUrl(profile.avatar_url,1800)
+            .then(({data})=>{if(live)setProfileAvatar(data?.signedUrl||null);});
+        } else setProfileAvatar(null);
+      }
     }).catch(showError);
     const poll = window.setInterval(() => { void loadServers(); void loadFriends(); }, 24000);
     return () => { live = false; window.clearInterval(poll); };
@@ -743,6 +751,9 @@ function App() {
               <span className="dm-dot" /></button>)}
             {friends.filter(f => f.status === 'accepted').length === 0 && <div className="sidebar-empty">Add a friend to start a DM.</div>}
           </div>}
+          {userRoles.includes('developer') && <button className="sidebar-developer-shortcut"
+            type="button" onClick={()=>openModal('developer')}>
+            <Bot size={17}/> Developer Portal <ChevronRight size={15}/></button>}
           <div className="sidebar-user">
             <button type="button" className="sidebar-account-trigger"
               title="Open your account and settings" aria-label="Open my account settings"
@@ -754,7 +765,7 @@ function App() {
                 }},
                 {id:'copy',label:'Copy user ID',icon:<Copy size={16}/>,onClick:()=>copyItem(me,'User ID')}
               ]})}>
-              <Avatar name={username || 'ZuzuCord'} />
+              <Avatar name={username || 'ZuzuCord'} src={profileAvatar}/>
               <span className="user-details"><strong>{profileName || username || 'ZuzuCord'}</strong>
                 <span>@{username||'member'} · {userRoles.includes('owner')?'Owner':userRoles.includes('developer')?'Developer':userRoles.includes('verified')?'Verified':
                   beta||userRoles.includes('beta_tester')?'Beta tester':'Member'}</span></span>
@@ -929,6 +940,8 @@ function App() {
         </aside>}
       </main>
       <ContextMenu menu={contextMenu} onClose={()=>setContextMenu(null)} />
+      {modal === 'developer' && session && userRoles.includes('developer') &&
+        <DeveloperWorkspace userId={me} onClose={()=>setModal(null)}/>}
       {modal === 'settings' && session && <SettingsScreen
         session={session} username={username} roles={userRoles}
         profileName={profileName} profileStatus={profileStatus}
@@ -941,6 +954,8 @@ function App() {
           return remote?{...validateAppearance(remote),compact:appearance.compact}:null;
         }}
         onPreferences={setClientPreferences}
+        onAvatarSaved={setProfileAvatar}
+        onOpenDeveloper={()=>openModal('developer')}
         onProfile={async(name,statusText)=>{
           if(!me)throw Error('Sign in before editing your profile.');
           await appApi.saveProfile(me,name,statusText);
@@ -974,11 +989,12 @@ function App() {
             <span style={{width:updateState.percent+'%'}}/></div>}
       </div>}
       {status && <div className="toast" role="status"><span>{status}</span><IconButton label="Dismiss" onClick={()=>setStatus('')}><X size={15}/></IconButton></div>}
-      {modal && modal !== 'settings' && <Dialog heading={{
+      {modal && modal !== 'settings' && modal !== 'developer' && <Dialog heading={{
         settings:'Appearance & effects', 'new-server':'Create a server','join-server':'Join a server',
         'new-channel':'New text channel','add-friend':'Add a friend',members:'Server members',
         invite:'Invite people',profile:'Your profile',bot:'ZuzuBot settings',
         announcements:'ZuzuCord Official',boost:'Crystals & Server Perks', 'install-bot':'Server bot applications',
+        developer:'Developer Portal',
         roles:'Server roles & permissions','owner-tools':'ZuzuCord Owner tools'
       }[modal]}
         onClose={() => setModal(null)} wide={modal === 'roles'}>
