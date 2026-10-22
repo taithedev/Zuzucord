@@ -1,7 +1,7 @@
 export {};
-type UpdatePhase = 'idle'|'checking'|'downloading'|'ready'|'current'|'error'|'unavailable';
-interface UpdateState { phase:UpdatePhase; version:string; percent:number; message:string; }
 declare global {
+  type UpdatePhase = 'idle'|'checking'|'downloading'|'ready'|'current'|'error'|'unavailable';
+  interface UpdateState { phase:UpdatePhase; version:string; percent:number; message:string; }
   interface Window {
     zuzuDesktop?: {
       secureGet(key: string): Promise<string | null>;
