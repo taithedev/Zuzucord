@@ -1,0 +1,359 @@
+import React, { useEffect, useState, type CSSProperties } from 'react';
+import { BadgeCheck, Bell, Check, ChevronRight, Cloud, Copy, Crown, ExternalLink, Eye,
+  EyeOff, Gem, Hash, KeyRound, LockKeyhole, LogOut, Monitor, Moon, Palette, RefreshCw,
+  Shield, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Users, Volume2, X } from 'lucide-react';
+import type { Session } from '@supabase/supabase-js';
+import { client, DEFAULT_APPEARANCE, type Appearance } from './api';
+import { type ClientPreferences, DEFAULT_CLIENT_PREFERENCES } from './clientPreferences';
+
+type Page = 'account'|'profile'|'security'|'privacy'|'notifications'|'appearance'|
+  'accessibility'|'updates'|'connections'|'server-tools';
+type UpdateState = {phase:string;version:string;percent:number;message:string};
+type Props = {
+  session:Session; username:string; roles:string[]; profileName:string; profileStatus:string;
+  appearance:Appearance; preferences:ClientPreferences; updateState:UpdateState;
+  onClose:()=>void; onAppearance:(appearance:Appearance)=>Promise<void>;
+  onImport:()=>Promise<Appearance|null>; onPreferences:(p:ClientPreferences)=>void;
+  onProfile:(name:string,status:string)=>Promise<void>; onLogout:()=>Promise<void>;
+  onCheckUpdates:()=>Promise<void>; onRestartUpdate:()=>Promise<void>;
+  onOpenServerRoles:()=>void; onOpenCrystals:()=>void;
+  hasServer:boolean; serverName:string;
+};
+const tabs: {group:string;links:{page:Page;label:string;icon:React.ElementType}[]}[] = [
+  {group:'ACCOUNT',links:[
+    {page:'account',label:'My Account',icon:UserRound},
+    {page:'profile',label:'Profiles',icon:BadgeCheck},
+    {page:'security',label:'Password & Security',icon:LockKeyhole},
+    {page:'privacy',label:'Data & Privacy',icon:Shield}
+  ]},
+  {group:'PREFERENCES',links:[
+    {page:'notifications',label:'Notifications',icon:Bell},
+    {page:'appearance',label:'Appearance & Themes',icon:Palette},
+    {page:'accessibility',label:'Accessibility',icon:Eye}
+  ]},
+  {group:'ZUZUCORD',links:[
+    {page:'updates',label:'Updates',icon:RefreshCw},
+    {page:'connections',label:'Website Sync',icon:Cloud},
+    {page:'server-tools',label:'Server Tools',icon:Users}
+  ]}
+];
+const swatches=['#a978ff','#8798fc','#9fd8b9','#f2a6b9','#d3d3e0','#e3b685'];
+function Tile({title,description,action,children}:{
+  title:string;description?:string;action?:React.ReactNode;children?:React.ReactNode
+}){return <div className="settings-tile"><div className="settings-tile-copy"><strong>{title}</strong>
+    {description&&<p>{description}</p>}</div>{children||action}</div>;}
+function Toggle({on,label,change,disabled=false}:{
+  on:boolean;label:string;change:(next:boolean)=>void;disabled?:boolean
+}){return <button className={'settings-switch '+(on?'on':'')} role="switch"
+  aria-label={label} aria-checked={on} disabled={disabled}
+  onClick={()=>change(!on)}><span/></button>;}
+function Section({eyebrow,title,description,children}:{
+  eyebrow:string;title:string;description:string;children:React.ReactNode
+}){return <section className="settings-section">
+  <span className="settings-overline">{eyebrow}</span><h2>{title}</h2>
+  <p className="settings-section-description">{description}</p>{children}
+</section>;}
+function SettingButton({children,onClick,disabled=false}:{
+  children:React.ReactNode;onClick:()=>void;disabled?:boolean
+}){return <button className="settings-action" type="button" onClick={onClick}
+  disabled={disabled}>{children}</button>;}
+
+export function SettingsScreen(props:Props) {
+  const { session,username,roles,profileName,profileStatus,appearance,preferences,updateState,
+    onClose,onAppearance,onImport,onPreferences,onProfile,onLogout,
+    onCheckUpdates,onRestartUpdate,onOpenServerRoles,onOpenCrystals,hasServer,serverName }=props;
+  const [page,setPage]=useState<Page>('account');
+  const [search,setSearch]=useState('');
+  const [draftName,setDraftName]=useState(profileName);
+  const [draftStatus,setDraftStatus]=useState(profileStatus);
+  const [draftTheme,setDraftTheme]=useState(appearance);
+  const [password,setPassword]=useState('');
+  const [showPassword,setShowPassword]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [feedback,setFeedback]=useState('');
+  const [failed,setFailed]=useState(false);
+  const [version,setVersion]=useState('');
+  useEffect(()=>{void window.zuzuDesktop?.version().then(setVersion).catch(()=>{});},[]);
+  useEffect(()=>{setDraftTheme(appearance);},[appearance]);
+  function change<K extends keyof Appearance>(key:K,value:Appearance[K]){
+    setDraftTheme(current=>({...current,[key]:value}));
+  }
+  const notice=(message:string,error=false)=>{setFeedback(message);setFailed(error);};
+  const saveProfile=async()=>{
+    if(!draftName.trim()||draftName.trim().length>60)return notice('Display names must contain 1–60 characters.',true);
+    setBusy(true);
+    try{await onProfile(draftName.trim(),draftStatus.trim());notice('Your profile was saved.');}
+    catch(e){notice(e instanceof Error?e.message:String(e),true)}
+    finally{setBusy(false)}
+  };
+  const changePassword=async(event:React.FormEvent)=>{
+    event.preventDefault();
+    if(password.length<10||password.length>128)return notice('Choose a password between 10 and 128 characters.',true);
+    setBusy(true);
+    try{
+      const {error}=await client.auth.updateUser({password});
+      if(error)throw error;
+      setPassword('');notice('Password updated successfully.');
+    }catch(e){notice(e instanceof Error?e.message:String(e),true)}
+    finally{setBusy(false)}
+  };
+  const saveAppearance=async()=>{
+    setBusy(true);
+    try{await onAppearance(draftTheme);notice('Appearance saved for this Windows app'+(draftTheme.sync_enabled?' and website sync.':'.'));}
+    catch(e){notice(e instanceof Error?e.message:String(e),true)}
+    finally{setBusy(false)}
+  };
+  const downloadTheme=async()=>{
+    setBusy(true);
+    try{
+      const remote=await onImport();
+      if(!remote)throw Error('No synced website appearance exists yet.');
+      setDraftTheme(remote);notice('Website colors imported. Press Save Appearance to keep them.');
+    }catch(e){notice(e instanceof Error?e.message:String(e),true)}
+    finally{setBusy(false)}
+  };
+  const changeAlerts=async(enabled:boolean)=>{
+    if(enabled){
+      if(!('Notification' in window)){notice('Desktop notifications are unavailable on this device.',true);return;}
+      const permission=await Notification.requestPermission();
+      if(permission!=='granted'){notice('Windows notification permission was not granted.',true);return;}
+    }
+    onPreferences({...preferences,desktopFriendAlerts:enabled});
+    notice(enabled?'Friend request alerts enabled on this device.':'Friend request alerts disabled.');
+  };
+  const copy=async(value:string)=>{
+    try{await navigator.clipboard.writeText(value);notice('Copied to clipboard.');}
+    catch{notice('Could not access clipboard.',true);}
+  };
+  const filtered=tabs.map(g=>({...g,links:g.links.filter(item=>
+    (item.label+' '+g.group).toLowerCase().includes(search.trim().toLowerCase()))}))
+    .filter(g=>g.links.length>0);
+  const pageTitle=tabs.flatMap(t=>t.links).find(link=>link.page===page)?.label||'Settings';
+  const alias=username+'@zuzucord.com';
+  const previewStyle={'--accent':draftTheme.accent,
+    '--gradient-a':draftTheme.gradient_start,
+    '--gradient-b':draftTheme.gradient_end} as CSSProperties;
+  return <div className="settings-screen" role="dialog" aria-modal="true" aria-label="ZuzuCord settings">
+    <aside className="settings-navigation">
+      <div className="settings-brand"><div className="settings-brand-logo">Z</div>
+        <div><strong>ZuzuCord</strong><small>Personal settings</small></div></div>
+      <button className="settings-identity" onClick={()=>{setPage('profile');notice('')}}>
+        <div className="settings-user-avatar">{username.slice(0,2).toUpperCase()}</div>
+        <div><strong>{profileName||username}</strong><small>@{username}</small></div><ChevronRight size={16}/>
+      </button>
+      <label className="settings-search"><SlidersHorizontal size={16}/>
+        <input value={search} placeholder="Find a setting" aria-label="Find a setting"
+          onChange={e=>setSearch(e.target.value)}/><kbd>Ctrl ,</kbd></label>
+      <div className="settings-navigation-scroll">
+        {filtered.map(group=><div className="settings-nav-group" key={group.group}>
+          <span>{group.group}</span>{group.links.map(link=><button type="button"
+            className={'settings-nav-link '+(page===link.page?'selected':'')}
+            key={link.page} onClick={()=>{setPage(link.page);setFeedback('')}}>
+            <link.icon size={17}/>{link.label}
+          </button>)}</div>)}
+        {filtered.length===0&&<p className="tiny muted">No matching settings.</p>}
+      </div>
+      <div className="settings-nav-footer"><button onClick={()=>void onLogout()}>
+        <LogOut size={17}/> Log out</button><small>ZuzuCord · Settings</small></div>
+    </aside>
+    <main className="settings-content">
+      <header className="settings-content-top"><span>USER SETTINGS <ChevronRight size={14}/> <strong>{pageTitle}</strong></span>
+        <button onClick={onClose} title="Close settings (Esc)" aria-label="Close settings"><X size={21}/>
+          <small>ESC</small></button></header>
+      <div className="settings-scroll" key={page}>
+      {page==='account'&&<Section eyebrow="ACCOUNT" title="My Account"
+        description="Your ZuzuCord identity, account details, and current access.">
+        <div className="settings-profile-banner"><div className="settings-profile-orb">{username.slice(0,1).toUpperCase()}</div>
+          <div><h3>{profileName||username}</h3><p>@{username} · {roles.includes('owner')?'Owner':roles.includes('developer')?'Developer':'Member'}</p>
+            <div className="settings-badges">{roles.map(role=><span key={role}><ShieldCheck size={12}/>{role.replace('_',' ')}</span>)}
+            {roles.length===0&&<span><BadgeCheck size={12}/> Community member</span>}</div></div>
+        </div>
+        <div className="settings-stack">
+          <Tile title="Username" description="Your unique account identifier.">
+            <strong className="settings-right">{username}</strong></Tile>
+          <Tile title="ZuzuCord ID" description="A login alias, not an email inbox.">
+            <SettingButton onClick={()=>void copy(alias)}><Copy size={15}/> {alias}</SettingButton></Tile>
+          <Tile title="Account ID" description="Useful when requesting help or granting platform roles.">
+            <SettingButton onClick={()=>void copy(session.user.id)}><Copy size={15}/> Copy ID</SettingButton></Tile>
+          <Tile title="Email recovery" description="Username-only accounts do not have a working recovery inbox.">
+            <strong className="settings-right">Not configured</strong></Tile>
+          <Tile title="Display name & status" description="Choose how other members see you.">
+            <SettingButton onClick={()=>setPage('profile')}>Edit Profile <ChevronRight size={15}/></SettingButton></Tile>
+        </div>
+      </Section>}
+      {page==='profile'&&<Section eyebrow="PERSONALIZATION" title="Your Profile"
+        description="Update your display name and status for friends and servers.">
+        <div className="settings-profile-editor"><div className="settings-profile-preview">
+          <div className="settings-profile-preview-banner"/><div className="settings-profile-preview-avatar">{username.slice(0,1).toUpperCase()}</div>
+          <h3>{draftName||username}</h3><small>@{username}</small>
+          <p>{draftStatus||'Set a status to let others know what you are doing.'}</p></div>
+          <div className="settings-form-fields"><label>Display name
+            <input value={draftName} maxLength={60} placeholder={username}
+              onChange={e=>setDraftName(e.target.value)}/></label>
+            <label>Status message<input value={draftStatus} maxLength={120}
+              placeholder="What are you working on?" onChange={e=>setDraftStatus(e.target.value)}/></label>
+            <button className="button button-primary" disabled={busy} onClick={()=>void saveProfile()}>
+              <Check size={16}/> Save Profile</button></div>
+        </div>
+      </Section>}
+      {page==='security'&&<Section eyebrow="ACCOUNT PROTECTION" title="Password & Security"
+        description="Manage your password and signed-in account safely.">
+        <div className="settings-note"><LockKeyhole size={18}/> ZuzuCord uses Supabase authentication. Passwords are never stored in desktop settings.</div>
+        <form className="settings-password-form" onSubmit={e=>void changePassword(e)}>
+          <label>New password (minimum 10 characters)</label><div className="settings-password-input">
+            <input type={showPassword?'text':'password'} value={password}
+              autoComplete="new-password" minLength={10} maxLength={128}
+              onChange={e=>setPassword(e.target.value)} placeholder="Enter new password" required/>
+            <button type="button" onClick={()=>setShowPassword(!showPassword)}
+              aria-label={showPassword?'Hide password':'Show password'}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button>
+          </div>
+          <small>Use a unique passphrase. Username-only accounts may not have email recovery available.</small>
+          <button className="button button-primary" disabled={busy} type="submit"><KeyRound size={16}/> Change Password</button>
+        </form>
+        <div className="settings-stack"><Tile title="This device"
+          description="Saved sign-in is protected by Windows account encryption when available.">
+          <strong className="settings-right">Windows</strong></Tile>
+          <Tile title="Sign out of this device" description="Close your active session and return to the login screen.">
+            <SettingButton onClick={()=>void onLogout()}><LogOut size={15}/> Sign out</SettingButton></Tile></div>
+        <p className="tiny muted">Multi-factor authentication and remote device management are not currently offered in ZuzuCord. We don't display fictional security statuses.</p>
+      </Section>}
+      {page==='privacy'&&<Section eyebrow="PRIVACY" title="Data & Privacy"
+        description="Control what this app displays and stores on your computer.">
+        <div className="settings-stack">
+          <Tile title="Activity sidebar" description="Show real friend and server activity while browsing channels.">
+            <Toggle on={preferences.showActivityPanel} label="Activity sidebar"
+              change={v=>onPreferences({...preferences,showActivityPanel:v})}/></Tile>
+          <Tile title="Desktop friend alerts"
+            description="Notify you when a new friend request arrives while the application is running.">
+            <Toggle on={preferences.desktopFriendAlerts} label="Desktop friend alerts"
+              change={v=>void changeAlerts(v)}/></Tile>
+          <Tile title="Local preferences" description="Clear non-sensitive appearance, accessibility and notification preferences on this PC.">
+            <SettingButton onClick={()=>{
+              if(!window.confirm('Reset local interface preferences on this device?'))return;
+              onPreferences(DEFAULT_CLIENT_PREFERENCES);notice('Local preferences reset.');
+            }}>Restore defaults</SettingButton></Tile>
+        </div>
+        <div className="settings-note"><Shield size={18}/> Messages, roles, servers, and friend requests remain protected by ZuzuCord's Supabase access rules. Local switches do not replace server-side privacy controls.</div>
+      </Section>}
+      {page==='notifications'&&<Section eyebrow="STAY UPDATED" title="Notifications"
+        description="Choose which alerts ZuzuCord shows on this Windows device.">
+        <div className="settings-stack"><Tile title="New friend requests"
+          description="A desktop alert when someone sends you a friend request. You can turn it off anytime.">
+          <Toggle on={preferences.desktopFriendAlerts} label="Friend request notifications"
+            change={v=>void changeAlerts(v)}/></Tile>
+          <Tile title="In-app alerts" description="Important confirmations and errors appear inside the app.">
+            <strong className="settings-right">Enabled</strong></Tile></div>
+        <p className="tiny muted">Message pings, server-wide mentions and mobile push notifications are not implemented yet. This screen only controls working local alerts.</p>
+      </Section>}
+      {page==='appearance'&&<Section eyebrow="LOOK & FEEL" title="Appearance"
+        description="Give ZuzuCord a personal look while keeping channels and text readable.">
+        <div className="settings-appearance-layout">
+          <div className="settings-appearance-fields">
+            <label className="settings-input-label">Theme</label>
+            <div className="settings-theme-selector">
+              {(['oled','graphite','midnight'] as const).map(theme=><button type="button"
+                key={theme} className={draftTheme.theme===theme?'selected':''}
+                onClick={()=>change('theme',theme)}><Moon size={16}/>
+                {theme==='oled'?'OLED Black':theme==='graphite'?'Graphite':'Midnight'}
+                {draftTheme.theme===theme&&<Check size={14}/>}</button>)}
+            </div>
+            <label className="settings-input-label">Accent color</label>
+            <div className="settings-accent-row">{swatches.map(color=><button
+              type="button" key={color} title={'Accent '+color}
+              className={'settings-swatch '+(draftTheme.accent===color?'selected':'')}
+              style={{background:color}} onClick={()=>change('accent',color)}/>)}
+              <label className="settings-custom-swatch">Custom <input type="color"
+                value={draftTheme.accent} onChange={e=>change('accent',e.target.value)}/></label></div>
+            <Tile title="Ambient gradients" description="Soft background blending behind channels.">
+              <Toggle on={draftTheme.gradient_enabled} label="Ambient gradients"
+                change={v=>change('gradient_enabled',v)}/></Tile>
+            <div className="settings-color-fields"><label>Start color<input type="color"
+              value={draftTheme.gradient_start} onChange={e=>change('gradient_start',e.target.value)}/></label>
+              <label>End color<input type="color" value={draftTheme.gradient_end}
+                onChange={e=>change('gradient_end',e.target.value)}/></label></div>
+            <label className="settings-range">Background glow <span>{draftTheme.glass_strength}%</span>
+              <input type="range" min={0} max={100} value={draftTheme.glass_strength}
+                onChange={e=>change('glass_strength',Number(e.target.value))}/></label>
+            <Tile title="Animated background" description="Subtle motion behind the workspace.">
+              <Toggle on={draftTheme.motion_enabled} label="Animated background"
+                change={v=>change('motion_enabled',v)}/></Tile>
+            <Tile title="Compact navigation" description="Fit more messages and channels on the screen.">
+              <Toggle on={draftTheme.compact} label="Compact navigation"
+                change={v=>change('compact',v)}/></Tile>
+            <div className="settings-action-row"><button className="button button-primary"
+              disabled={busy} onClick={()=>void saveAppearance()}><Check size={16}/> Save Appearance</button>
+              <button className="button button-subtle" onClick={()=>setDraftTheme(DEFAULT_APPEARANCE)}>Reset preview</button></div>
+          </div>
+          <div className="settings-live-preview"><span>LIVE PREVIEW</span>
+            <div className={'settings-miniapp '+(draftTheme.gradient_enabled?'on':'')} style={previewStyle}>
+              <div className="settings-mini-rail"><b>Z</b><div>#</div><div>+</div></div>
+              <div className="settings-mini-left"><strong>Your community</strong><p># general</p><p># announcements</p><p># media</p></div>
+              <div className="settings-mini-chat"><strong># general</strong><p>Welcome to ZuzuCord.</p><div>Change your colors and make it yours.</div><small>Message #general</small></div>
+            </div><small>Preview only. Click Save Appearance to apply your changes.</small></div>
+        </div>
+      </Section>}
+      {page==='accessibility'&&<Section eyebrow="COMFORT & READABILITY" title="Accessibility"
+        description="Adjust text size, density and visual effects.">
+        <div className="settings-stack">
+          <Tile title="High contrast" description="Strengthen text colors, control borders, and keyboard focus indicators.">
+            <Toggle on={preferences.highContrast} label="High contrast"
+              change={v=>onPreferences({...preferences,highContrast:v})}/></Tile>
+          <Tile title="Reduce motion" description="Disable animated backgrounds and nonessential transitions.">
+            <Toggle on={!appearance.motion_enabled} label="Reduce motion"
+              change={v=>void onAppearance({...appearance,motion_enabled:!v})}/></Tile>
+          <Tile title="Message density" description="Control spacing between individual messages.">
+            <select className="settings-select" value={preferences.messageSpacing}
+              aria-label="Message density" onChange={e=>onPreferences({...preferences,
+                messageSpacing:e.target.value as 'comfortable'|'compact'})}>
+              <option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></Tile>
+        </div>
+        <label className="settings-range">Text size <span>{preferences.fontScale}%</span>
+          <input type="range" min="85" max="125" step="5" value={preferences.fontScale}
+            onChange={e=>onPreferences({...preferences,fontScale:Number(e.target.value)})}/></label>
+      </Section>}
+      {page==='updates'&&<Section eyebrow="DESKTOP APP" title="Updates"
+        description="ZuzuCord installs once and downloads future official updates automatically.">
+        <div className="settings-updates-panel"><div><Monitor size={24}/><h3>Installed ZuzuCord</h3>
+          <p>Version {version||'Checking…'}</p></div>
+          <div className="settings-update-status"><strong>{updateState.phase==='ready'?'Ready to install':
+            updateState.phase==='downloading'?'Downloading '+updateState.percent+'%':
+            updateState.phase==='current'?'Up to date':
+            updateState.phase==='checking'?'Checking for updates':
+            updateState.phase==='error'?'Update check failed':'Automatic updates'}</strong>
+            <p>{updateState.message||'Official versioned GitHub releases are checked in the background.'}</p>
+            {updateState.phase==='downloading'&&<div className="settings-update-progress"><span style={{width:updateState.percent+'%'}}/></div>}
+            {updateState.phase==='ready'?<button className="button button-primary" onClick={()=>void onRestartUpdate()}>
+              <RefreshCw size={16}/> Restart & Install</button>:
+              <button className="button button-subtle" onClick={()=>void onCheckUpdates()}>
+                <RefreshCw size={16}/> Check for updates</button>}</div></div>
+        <p className="tiny muted">Downloaded updates install when the app closes or you choose Restart & Install. Portable ZIP builds do not use installed-app auto-updates.</p>
+      </Section>}
+      {page==='connections'&&<Section eyebrow="CLOUD PREFERENCES" title="Website Sync"
+        description="Sync OLED themes, gradients and your preferred server with your ZuzuCord account.">
+        <div className="settings-stack"><Tile title="Account appearance sync"
+          description="Make your website and Windows theme use the same saved colors and effects.">
+          <Toggle on={appearance.sync_enabled} label="Website sync"
+            change={v=>void onAppearance({...appearance,sync_enabled:v})}/></Tile>
+          <Tile title="Import website theme" description="Load your existing website colors into the theme editor.">
+            <SettingButton disabled={busy} onClick={()=>void (async()=>{
+              await downloadTheme();setPage('appearance');
+            })()}><Cloud size={16}/> Import</SettingButton></Tile></div>
+        <div className="settings-note"><Cloud size={18}/> Website sync saves appearance and preferred server. It does not sync passwords, private messages, or device secrets.</div>
+      </Section>}
+      {page==='server-tools'&&<Section eyebrow="COMMUNITY MANAGEMENT" title="Server Tools"
+        description="Configure roles, permissions and server boosts using ZuzuCord's secured backend.">
+        <div className="settings-stack"><Tile title="Server roles"
+          description={hasServer?'Edit roles and members in '+serverName+'.':'Choose a server first to manage its roles.'}>
+          <SettingButton disabled={!hasServer} onClick={onOpenServerRoles}><Users size={16}/> Open roles</SettingButton></Tile>
+          <Tile title="Crystals & boosts" description="View Crystal balance, boost levels and unlocked community customization.">
+            <SettingButton onClick={onOpenCrystals}><Gem size={16}/> Open wallet</SettingButton></Tile></div>
+        <div className="settings-note"><ShieldCheck size={18}/> Server-owner powers are checked on Supabase. Being a ZuzuCord platform developer does not grant access to someone else's server.</div>
+      </Section>}
+      {feedback&&<div role={failed?'alert':'status'} className={'settings-feedback '+(failed?'error':'ok')}>
+        {failed?<Shield size={15}/>:<Check size={15}/>} {feedback}
+        <button onClick={()=>setFeedback('')} aria-label="Dismiss message"><X size={14}/></button></div>}
+      <footer className="settings-content-footer">ZuzuCord for Windows · Independent community application</footer>
+      </div>
+    </main>
+  </div>;
+}
