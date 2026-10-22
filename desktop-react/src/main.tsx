@@ -18,6 +18,9 @@ import {
 import { ServerRolesEditor } from './ServerRolesEditor';
 import { OwnerConsole } from './OwnerConsole';
 import { CrystalCenter } from './CrystalCenter';
+import { SettingsScreen } from './SettingsScreen';
+import { ContextMenu, type MenuDetails } from './ContextMenu';
+import { readClientPreferences, saveClientPreferences, type ClientPreferences } from './clientPreferences';
 import './styles.css';
 
 type View = 'friends' | 'channel' | 'dm';
@@ -141,6 +144,9 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [rightPanel, setRightPanel] = useState(true);
+  const [clientPreferences, setClientPreferences] = useState<ClientPreferences>(readClientPreferences);
+  const [contextMenu, setContextMenu] = useState<MenuDetails|null>(null);
+  const seenFriendRequests = useRef<Set<string>|null>(null);
   const [beta, setBeta] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [walletCrystals, setWalletCrystals] = useState(0);
@@ -189,6 +195,24 @@ function App() {
     saveLocalAppearance(appearance);
   }, [appearance]);
   useEffect(() => {
+    saveClientPreferences(clientPreferences);
+    setRightPanel(clientPreferences.showActivityPanel);
+  }, [clientPreferences]);
+  useEffect(() => {
+    const incoming = new Set(friends.filter(f=>f.status==='pending'&&!f.outgoing).map(f=>f.requestId));
+    const previous=seenFriendRequests.current;
+    if (previous && clientPreferences.desktopFriendAlerts && 'Notification' in window
+      && Notification.permission==='granted') {
+      for (const id of incoming) {
+        if(!previous.has(id)) {
+          try {new Notification('New ZuzuCord friend request', {body:'Open ZuzuCord to review your pending requests.'});}
+          catch {/* Notifications can be blocked by Windows */ }
+        }
+      }
+    }
+    seenFriendRequests.current=incoming;
+  },[friends,clientPreferences.desktopFriendAlerts]);
+  useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -198,7 +222,7 @@ function App() {
         event.preventDefault();
         setModal('settings');
       }
-      if (event.key === 'Escape') setModal(null);
+      if (event.key === 'Escape') { setContextMenu(null); setModal(null); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -207,7 +231,17 @@ function App() {
   const showError = (error: unknown) => {
     setStatus(getError(error));
   };
+  const openContext = (event: React.MouseEvent<HTMLElement>,menu:Omit<MenuDetails,'x'|'y'>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setContextMenu({x:event.clientX,y:event.clientY,...menu});
+  };
+  const copyItem = (item:string,label:string) => {
+    void navigator.clipboard.writeText(item).then(()=>setStatus(label+' copied to clipboard.'))
+      .catch(()=>setStatus('Clipboard unavailable.'));
+  };
   const openModal = (next: ModalName) => {
+    setContextMenu(null);
     setModal(next); setModalValue(''); setModalOther(''); setStatus('');
     if (next === 'boost' && me) {
       void appApi.wallet(me).then(wallet => {
@@ -514,6 +548,7 @@ function App() {
   };
 
   const themeStyle = {
+    '--user-font-scale':String(clientPreferences.fontScale/100),
     '--accent': appearance.accent,
     '--gradient-a': appearance.gradient_start,
     '--gradient-b': appearance.gradient_end,
@@ -544,7 +579,9 @@ function App() {
   return <div className={'zuzu-app theme-' + appearance.theme
     + (appearance.gradient_enabled ? ' has-gradient' : '')
     + (appearance.motion_enabled ? ' has-motion' : ' no-motion')
-    + (appearance.compact ? ' compact' : '')} style={themeStyle}>
+    + (appearance.compact ? ' compact' : '')
+    + (clientPreferences.highContrast ? ' high-contrast' : '')
+    + (clientPreferences.messageSpacing === 'compact' ? ' message-compact' : '')} style={themeStyle}>
     <header className="titlebar">
       <div className="title-nav"><Sparkles size={15} /> <strong>ZuzuCord</strong> <span>V3 • React Desktop</span></div>
       <span className="window-drag" />
