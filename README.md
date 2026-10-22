@@ -148,3 +148,11 @@ The repository migration `supabase/migrations/20261021_zuzucord_v06_bot_and_live
 ## ZuzuCord v0.10: Crystals and server perks
 
 Crystals are free, server-managed points, granted by developers and spent on permanent server boosts (100 per level). Boost levels unlock channel capacity, a custom accent, a gradient and an upgraded-server badge. The desktop application has a Crystals wallet and ledger; the redesigned OLED website explains the tiers without advertising paid currency. Legacy credits remain usable. The implementation and security controls are documented in `desktop-react/README.md` and `supabase/migrations/20261021_zuzucord_crystals_nonmonetary_server_perks.sql`.
+
+## Native ZuzifySocials features for Windows (October 2026)
+
+The first migration of [ZuzifySocials](https://github.com/taithedev/ZuzifySocials) into the ZuzuCord **React Windows app** adds a native **Socials** area. Signed-in members can create posts and Moments with photos or short videos, like and comment, follow creators, save posts, search recent updates and view the Discover feed. Creators can be hidden from the personal feed, and members can submit reports. ZuzuCord platform Owners can review reports and remove offending posts. Media lives in a private Supabase Storage bucket with signed URLs and a maximum upload size of 25 MB.
+
+The original ZuzifySocials site uses a **different Supabase project**, so no legacy login records, passwords, posts or private conversations have been silently copied. The Windows app continues to use its own `zuzucord_` backend, including Row Level Security and its existing accounts.
+
+**This is an initial native feature port, not yet full feature parity.** Legacy Stories, the full Games Hub, Zuz Edit game editor/runtime, creator marketplace, music library and advanced creator/owner tools require separate work. See [the feature migration status](desktop-react/ZUZIFY_SOCIALS_PORT.md) for what is operational and what still needs porting.
