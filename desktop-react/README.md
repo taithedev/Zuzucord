@@ -71,7 +71,7 @@ The screenshot-informed UI intentionally follows a familiar communities/friends/
 
 Official announcements are a read-only global inbox available to every registered user; developer publishing is rate-limited server-side. User roles (developer, verified, beta tester) are stored in server-managed records, with regular user as the default. ServerBoostCredits are granted by developers only and expand a boosted server's channel capacity from 30 to 40, 50 or 60. Server owners may install approved ZuzuCord bot applications whose tokens are generated and stored hashed by the dedicated Edge API. The separate `zuzucorddevportal` folder is deployable as a Vercel site; a privileged administrator must explicitly provision its developer role.
 
-The packaged app checks official GitHub releases for `v`-prefixed tags. Users may download a qualifying Windows installer through the application, but unsigned EXEs are never silently executed. See `UPDATES.md`.
+Starting with v0.11, the installed NSIS app checks for newer **published stable v-prefixed versions**, automatically downloads the updater's SHA-512-verified setup package, and installs it over the existing application when the user closes ZuzuCord. **Restart & update** applies it sooner. Earlier v0.10 builds require one new installation to acquire the updater. See `UPDATES.md` for release metadata, limitations and required code signing.
 
 ## Crystals economy (v0.10)
 
@@ -86,3 +86,7 @@ Each permanent server boost costs **100 Crystals** and requires server membershi
 The server checks balance and level, locks concurrent upgrades, debits the wallet, records the transaction and adds the boost in **one database transaction**. Existing ServerBoostCredits are **preserved and spendable** at one legacy credit per boost (equivalent to 100 Crystals) rather than being duplicated or deleted. These legacy credits show as Crystal-equivalent spendable balance in the new UI. They remain distinct database units for older app compatibility.
 
 The public website also displays the **real total number of server boosts** from aggregate Supabase statistics. No individual wallet details or transaction histories are public.
+
+## Installed-app automatic updater (v0.11+)
+
+The Windows `.exe` is installed **once**. After installation, ZuzuCord automatically checks its official GitHub release feed on startup and about every four hours, downloads updates in the background, displays progress, and installs the downloaded update automatically on normal app exit. **Restart & update** is available when the download completes. The update metadata `latest.yml`, matching NSIS setup installer, and `.blockmap` are uploaded together with a stable tag (such as `v0.11.77`). This workflow does not apply to portable ZIP usage; see [UPDATES.md](UPDATES.md). Unsigned preview installer updates still need signing and real Windows end-to-end tests.
