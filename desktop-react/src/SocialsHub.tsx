@@ -5,7 +5,7 @@ import { Bookmark, Camera, Check, ChevronDown, Clock3, Compass, Copy, Film, Hear
 import { client } from './api';
 
 type SocialKind = 'post'|'moment';
-type Tab = 'feed'|'moments'|'following'|'saved'|'discover';
+type Tab = 'feed'|'moments'|'following'|'saved'|'discover'|'hidden';
 type Post = {id:string;author_id:string;kind:SocialKind;content:string;media_path:string|null;
   media_type:'image'|'video'|null;created_at:string};
 type Reaction = {post_id:string;user_id:string};
@@ -39,6 +39,7 @@ export function SocialsHub({userId,owner,onMessage}:{
   const [likes,setLikes]=useState<Reaction[]>([]);
   const [saved,setSaved]=useState<Set<string>>(new Set());
   const [following,setFollowing]=useState<Set<string>>(new Set());
+  const [hiddenCreators,setHiddenCreators]=useState<Set<string>>(new Set());
   const [authors,setAuthors]=useState<Record<string,Author>>({});
   const [mediaUrls,setMediaUrls]=useState<Record<string,string>>({});
   const [comments,setComments]=useState<Record<string,Comment[]>>({});
@@ -55,11 +56,13 @@ export function SocialsHub({userId,owner,onMessage}:{
   const load=useCallback(async()=>{
     setLoading(true);setError('');
     try{
-      const [postResult,followResult]=await Promise.all([
+      const [postResult,followResult,hiddenResult]=await Promise.all([
         client.from('zuzucord_social_posts').select('id,author_id,kind,content,media_path,media_type,created_at')
           .order('created_at',{ascending:false}).limit(100),
-        client.from('zuzucord_social_follows').select('followed_id').eq('follower_id',userId)
+        client.from('zuzucord_social_follows').select('followed_id').eq('follower_id',userId),
+        client.from('zuzucord_social_hidden_creators').select('hidden_user_id').eq('user_id',userId)
       ]);
+      if(hiddenResult.error)throw hiddenResult.error;
       if(postResult.error)throw postResult.error;
       if(followResult.error)throw followResult.error;
       const records=(postResult.data||[]) as Post[];
@@ -89,7 +92,9 @@ export function SocialsHub({userId,owner,onMessage}:{
       if(!mounted.current)return;
       setPosts(records);setLikes(likesResult.data as Reaction[]||[]);
       setSaved(new Set((savedResult.data||[]).map(x=>x.post_id)));
+
       setFollowing(new Set((followResult.data||[]).map(x=>x.followed_id)));
+      setHiddenCreators(new Set((hiddenResult.data||[]).map(x=>x.hidden_user_id)));
       setAuthors(nameMap);setMediaUrls(Object.fromEntries(signed));
     }catch(e){if(mounted.current)setError(getErr(e));}
     finally{if(mounted.current)setLoading(false);}
@@ -157,6 +162,31 @@ export function SocialsHub({userId,owner,onMessage}:{
       setSaved(old=>{const next=new Set(old);if(yes)next.delete(postId);else next.add(postId);return next;});
     }catch(e){setError(getErr(e));}
   };
+  const toggleHidden=async(target:string)=>{
+    if(target===userId)return;
+    try{
+      const exists=hiddenCreators.has(target);
+      if(!exists&&!confirm('Hide this creator’s posts from your ZuzuCord feed? You can undo this in the Hidden tab.'))return;
+      const result=exists?await client.from('zuzucord_social_hidden_creators').delete()
+        .eq('user_id',userId).eq('hidden_user_id',target):
+        await client.from('zuzucord_social_hidden_creators').insert({user_id:userId,hidden_user_id:target});
+      if(result.error)throw result.error;
+      setHiddenCreators(old=>{const n=new Set(old);if(exists)n.delete(target);else n.add(target);return n;});
+      onMessage(exists?'Creator restored to your feed.':'Creator hidden from your feed.');
+    }catch(e){setError(getErr(e));}
+  };
+  const reportPost=async(postId:string)=>{
+    const reason=prompt('Why are you reporting this post? Please give a short explanation (8–500 characters).');
+    if(reason===null)return;
+    if(reason.trim().length<8||reason.length>500){setError('Please enter 8–500 characters explaining the issue.');return;}
+    try{
+      const result=await client.from('zuzucord_social_reports').insert({
+        post_id:postId,reporter_id:userId,reason:reason.trim()
+      });
+      if(result.error)throw result.error;
+      onMessage('Report submitted for Owner review.');
+    }catch(e){setError(getErr(e));}
+  };
   const toggleFollow=async(target:string)=>{
     if(target===userId)return;
     try{
@@ -217,6 +247,7 @@ export function SocialsHub({userId,owner,onMessage}:{
   };
   const visible=useMemo(()=>{
     let list=posts.filter(p=>
+      tab==='hidden'?hiddenCreators.has(p.author_id):hiddenCreators.has(p.author_id)?false:
       tab==='moments'?p.kind==='moment':
       tab==='following'?following.has(p.author_id)||p.author_id===userId:
       tab==='saved'?saved.has(p.id):tab==='discover'?true:true);
@@ -229,7 +260,7 @@ export function SocialsHub({userId,owner,onMessage}:{
     if(sort==='popular')list=[...list].sort((a,b)=>
       likes.filter(x=>x.post_id===b.id).length-likes.filter(x=>x.post_id===a.id).length);
     return list;
-  },[posts,tab,following,saved,userId,search,authors,sort,likes]);
+  },[posts,tab,following,saved,hiddenCreators,userId,search,authors,sort,likes]);
   const creators=[...new Set(posts.map(p=>p.author_id).filter(id=>id!==userId))].slice(0,10);
   return <div className="socials-shell">
     <div className="socials-page-header">
@@ -240,7 +271,7 @@ export function SocialsHub({userId,owner,onMessage}:{
     </div>
     <div className="socials-tabs" role="tablist" aria-label="Social feeds">
       {([['feed','For you',Compass],['moments','Moments',Film],['following','Following',Users],
-        ['saved','Saved',Bookmark],['discover','Discover',UserPlus]] as const).map(([id,label,Icon])=>
+        ['saved','Saved',Bookmark],['discover','Discover',UserPlus],['hidden','Hidden',X]] as const).map(([id,label,Icon])=>
         <button key={id} role="tab" aria-selected={tab===id}
           className={tab===id?'active':''} onClick={()=>setTab(id)}><Icon size={16}/>{label}</button>)}
     </div>
@@ -283,6 +314,7 @@ export function SocialsHub({userId,owner,onMessage}:{
         <p>{loading?'Loading recent posts and Moments from Supabase.':
           tab==='following'?'Follow other creators to see their posts here.':
           tab==='saved'?'Bookmark posts to keep them here.':
+          tab==='hidden'?'Your hidden creators will appear here.':
           'Be the first to publish something for the community.'}</p></div>:
       visible.map(post=>{
         const liked=likes.some(l=>l.post_id===post.id&&l.user_id===userId);
@@ -299,6 +331,9 @@ export function SocialsHub({userId,owner,onMessage}:{
             {!own&&<button className="socials-follow" onClick={()=>void toggleFollow(post.author_id)}>
               {followingAuthor?<Check size={15}/>:<UserPlus size={15}/>}
               {followingAuthor?'Following':'Follow'}</button>}
+            {!own&&<button className="socials-post-delete" onClick={()=>void toggleHidden(post.author_id)}
+              title={hiddenCreators.has(post.author_id)?'Show creator again':'Hide this creator'}
+              aria-label={hiddenCreators.has(post.author_id)?'Show creator':'Hide creator'}><X size={16}/></button>}
             {(own||owner)&&<button className="socials-post-delete" onClick={()=>void deletePost(post)}
               title="Delete post" aria-label="Delete post"><Trash2 size={17}/></button>}
           </div>
@@ -316,6 +351,8 @@ export function SocialsHub({userId,owner,onMessage}:{
             <button className={saved.has(post.id)?'saved':''} onClick={()=>void toggleSaved(post.id)}
               aria-label={saved.has(post.id)?'Remove bookmark':'Bookmark post'}>
               <Bookmark size={17} fill={saved.has(post.id)?'currentColor':'none'}/> {saved.has(post.id)?'Saved':'Save'}</button>
+            {!own&&<button onClick={()=>void reportPost(post.id)} title="Report a post to ZuzuCord moderators">
+              <MoreHorizontal size={16}/> Report</button>}
             <button onClick={()=>{
               void navigator.clipboard.writeText(name(post.author_id)+' on ZuzuCord: '+post.content)
                 .then(()=>onMessage('Post text copied to clipboard.'))
