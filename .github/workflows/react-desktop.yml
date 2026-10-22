@@ -12,6 +12,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+# Prevent simultaneous builds from publishing an older release as GitHub's
+# 'latest' after a newer version was already uploaded.
+concurrency:
+  group: zuzucord-windows-release-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     name: Build React Windows Installer
