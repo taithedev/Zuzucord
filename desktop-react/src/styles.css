@@ -803,3 +803,39 @@ padding:10px;border-radius:8px;font-size:11px}
  .zuzu-app button:not(:disabled),.zuzu-app .socials-post,.zuzu-app .socials-avatar{transition:none}
  .zuzu-app.has-motion.has-gradient::before{animation:none}
 }
+
+/* Social profile cards, real reshares, direct access to account settings */
+.socials-post-actions button.reshared{color:#82dcc1}
+.socials-author-link{border:0;background:transparent;color:#faf5ff;font-size:12px;
+ font-weight:750;padding:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.socials-author-link:hover{text-decoration:underline;text-underline-offset:2px}
+.socials-avatar-button{border:1px solid #ffffff28;cursor:pointer}
+.socials-avatar-button:hover,.socials-avatar-button:focus-visible{
+ outline:2px solid var(--accent);outline-offset:2px}
+.socials-my-account-link{background:transparent;border:0;color:#b89fd4;font-size:10px;
+ text-align:left;padding:2px 0}
+.socials-my-account-link:hover{text-decoration:underline}
+.socials-profile-backdrop{position:fixed;inset:34px 0 0;z-index:95;background:#08060bbd;
+ backdrop-filter:blur(5px);display:grid;place-items:center;padding:18px}
+.socials-profile-panel{position:relative;width:min(440px,100%);display:grid;
+ gap:10px;max-height:min(85vh,680px);overflow-y:auto;padding:0 22px 22px;
+ background:#17111f;border:1px solid #695478;border-radius:17px;
+ box-shadow:0 22px 90px #000e;color:#f4edf9}
+.socials-profile-banner{height:104px;margin:0 -22px;
+ background:radial-gradient(circle at 23% 30%,var(--gradient-middle,#24163a),transparent 70%),
+ linear-gradient(var(--gradient-angle,135deg),var(--gradient-a,#2c1242),var(--gradient-b,#07050f))}
+.socials-profile-avatar{width:70px;height:70px;border:5px solid #17111f;
+ margin-top:-48px;border-radius:22px;background:var(--accent);display:grid;
+ place-items:center;font-size:22px;font-weight:850}
+.socials-profile-close{position:absolute;top:13px;right:13px;display:grid;
+ place-items:center;background:#100b12bc;color:white;border:1px solid #ffffff2e;
+ border-radius:9px;width:31px;height:31px}
+.socials-profile-panel h3{margin:2px 0 0;font-size:21px;letter-spacing:-.6px}
+.socials-profile-handle,.socials-profile-status{margin:0;font-size:11px;color:#b3a4c5}
+.socials-profile-status{padding:12px 0;line-height:1.6;color:#e6daee}
+.socials-profile-counts{display:flex;gap:20px;padding:13px 0;
+ border-top:1px solid #ffffff14;border-bottom:1px solid #ffffff14}
+.socials-profile-counts span{font-size:11px;color:#a99bb6}
+.socials-profile-counts strong{color:white;font-size:16px;margin-right:5px}
+.socials-profile-panel>.button{justify-self:start}
+@media(prefers-reduced-motion:reduce){.socials-profile-backdrop{backdrop-filter:none}}
