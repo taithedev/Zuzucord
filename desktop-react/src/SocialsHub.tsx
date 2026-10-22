@@ -10,7 +10,8 @@ type Post = {id:string;author_id:string;kind:SocialKind;content:string;media_pat
   media_type:'image'|'video'|null;created_at:string};
 type Reaction = {post_id:string;user_id:string};
 type Comment = {id:string;post_id:string;author_id:string;content:string;created_at:string};
-type Author = {username:string;display_name?:string};
+type Author = {username:string;display_name?:string;avatar_url?:string|null;
+ banner_path?:string|null;bio?:string;pronouns?:string;avatarSrc?:string};
 const bucket = 'zuzucord-social-media';
 const maxUpload = 25 * 1024 * 1024;
 const formats:Record<string,string>={
@@ -40,6 +41,9 @@ export function SocialsHub({userId,owner,onMessage,onAccountSettings}:{
   const [reposts,setReposts]=useState<Reaction[]>([]);
   const [selectedCreator,setSelectedCreator]=useState<string|null>(null);
   const [creatorStatus,setCreatorStatus]=useState('');
+  const [creatorBanner,setCreatorBanner]=useState('');
+  const [creatorBio,setCreatorBio]=useState('');
+  const [creatorPronouns,setCreatorPronouns]=useState('');
   const [saved,setSaved]=useState<Set<string>>(new Set());
   const [following,setFollowing]=useState<Set<string>>(new Set());
   const [hiddenCreators,setHiddenCreators]=useState<Set<string>>(new Set());
@@ -85,12 +89,21 @@ export function SocialsHub({userId,owner,onMessage,onAccountSettings}:{
         .select('user_id,username').in('user_id',users):{data:[],error:null};
       if(accounts.error)throw accounts.error;
       const profiles=users.length?await client.from('zuzucord_profiles')
-        .select('user_id,display_name').in('user_id',users):{data:[],error:null};
+        .select('user_id,display_name,avatar_url,banner_path,bio,pronouns').in('user_id',users):{data:[],error:null};
       const nameMap:Record<string,Author>={};
       for(const account of accounts.data||[])nameMap[account.user_id]={username:account.username};
       if(!profiles.error)for(const person of profiles.data||[]){
-        nameMap[person.user_id]={...(nameMap[person.user_id]||{username:'Member'}),display_name:person.display_name};
+        nameMap[person.user_id]={...(nameMap[person.user_id]||{username:'Member'}),
+          display_name:person.display_name,avatar_url:person.avatar_url||null,
+          banner_path:person.banner_path||null,bio:person.bio||'',pronouns:person.pronouns||''};
       }
+      const avatarPaths=[...new Set(Object.values(nameMap).map(a=>a.avatar_url).filter((x):x is string=>Boolean(x)))];
+      const avatarLinks=await Promise.all(avatarPaths.map(async path=>{
+        const {data}=await client.storage.from('zuzucord-profile-media').createSignedUrl(path,1800);
+        return [path,data?.signedUrl||''] as const;
+      }));
+      const avatarMap=Object.fromEntries(avatarLinks);
+      for(const author of Object.values(nameMap)) if(author.avatar_url)author.avatarSrc=avatarMap[author.avatar_url]||'';
       const paths=[...new Set(records.map(p=>p.media_path).filter((v):v is string=>Boolean(v)))];
       const signed=await Promise.all(paths.map(async path=>{
         const {data}=await client.storage.from(bucket).createSignedUrl(path,3600);
@@ -180,15 +193,21 @@ export function SocialsHub({userId,owner,onMessage,onAccountSettings}:{
   };
   const viewCreator=async(id:string)=>{
     setSelectedCreator(id);
-    setCreatorStatus('');
+    setCreatorStatus('');setCreatorBio('');setCreatorPronouns('');setCreatorBanner('');
     try{
       const {data,error}=await client.from('zuzucord_profiles')
-        .select('display_name,status_text').eq('user_id',id).maybeSingle();
+        .select('display_name,status_text,bio,pronouns,avatar_url,banner_path').eq('user_id',id).maybeSingle();
       if(error)throw error;
-      setCreatorStatus(data?.status_text||'');
+      setCreatorStatus(data?.status_text||'');setCreatorBio(data?.bio||'');
+      setCreatorPronouns(data?.pronouns||'');
       if(data?.display_name)setAuthors(old=>({...old,[id]:{
         ...(old[id]||{username:'member'}),display_name:data.display_name
       }}));
+      if(data?.banner_path){
+        const {data:link}=await client.storage.from('zuzucord-profile-media')
+          .createSignedUrl(data.banner_path,1800);
+        if(link?.signedUrl)setCreatorBanner(link.signedUrl);
+      }
     }catch(error){setError(getErr(error));}
   };
   const toggleSaved=async(postId:string)=>{
@@ -399,7 +418,9 @@ export function SocialsHub({userId,owner,onMessage,onAccountSettings}:{
             className="socials-avatar socials-avatar-button"
             aria-label={'View '+name(post.author_id)+' profile'}
             onClick={()=>void viewCreator(post.author_id)}>
-            {(name(post.author_id).slice(0,2)||'ZU').toUpperCase()}</button>
+            {authors[post.author_id]?.avatarSrc?
+              <img src={authors[post.author_id].avatarSrc} alt="" className="socials-avatar-img"/>:
+              (name(post.author_id).slice(0,2)||'ZU').toUpperCase()}</button>
             <div className="socials-post-author"><button type="button" className="socials-author-link"
               onClick={()=>void viewCreator(post.author_id)}>{name(post.author_id)}</button>
               <span>@{authors[post.author_id]?.username||'member'} · {ago(post.created_at)}
@@ -461,11 +482,15 @@ export function SocialsHub({userId,owner,onMessage,onAccountSettings}:{
           aria-label={name(selectedCreator)+' social profile'} onClick={event=>event.stopPropagation()}>
           <button className="socials-profile-close" aria-label="Close profile"
             onClick={()=>setSelectedCreator(null)}><X size={19}/></button>
-          <div className="socials-profile-banner"/>
-          <div className="socials-profile-avatar">{name(selectedCreator).slice(0,2).toUpperCase()}</div>
+          <div className="socials-profile-banner" style={creatorBanner?{backgroundImage:'url('+JSON.stringify(creatorBanner)+')'}:undefined}/>
+          <div className="socials-profile-avatar">{authors[selectedCreator]?.avatarSrc?
+              <img src={authors[selectedCreator].avatarSrc} alt="" className="socials-avatar-img"/>:
+              name(selectedCreator).slice(0,2).toUpperCase()}</div>
           <h3>{name(selectedCreator)}</h3>
           <p className="socials-profile-handle">@{authors[selectedCreator]?.username||'member'}</p>
           <p className="socials-profile-status">{creatorStatus||'ZuzuCord community member'}</p>
+          {creatorPronouns&&<p className="socials-profile-status">{creatorPronouns}</p>}
+          {creatorBio&&<p className="socials-profile-bio">{creatorBio}</p>}
           <div className="socials-profile-counts">
             <span><strong>{posts.filter(p=>p.author_id===selectedCreator).length}</strong> Recent posts</span>
             <span><strong>{new Set(reposts.filter(r=>posts.some(p=>p.author_id===selectedCreator&&p.id===r.post_id)).map(r=>r.user_id)).size}</strong> Resharers</span>
