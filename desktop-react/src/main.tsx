@@ -638,6 +638,21 @@ function App() {
           <div className="server-divider" />
           {servers.map((server, index) => <button className={'server-circle ' + (selectedServer === server.id ? 'current' : '')}
             key={server.id} onClick={() => serverSelect(server.id)} title={server.name}
+            onContextMenu={event=>openContext(event,{title:server.name,actions:[
+              {id:'open',label:'Open server',icon:<ServerIcon size={16}/>,onClick:()=>serverSelect(server.id)},
+              {id:'invite',label:'Copy invite code',icon:<Copy size={16}/>,onClick:()=>{
+                void appApi.serverInvite(server.id).then(code=>{
+                  if(code) copyItem(code,'Invite code');
+                  else setStatus('No invite available for this server.');
+                }).catch(showError);
+              }},
+              {id:'copy-id',label:'Copy server ID',icon:<Hash size={16}/>,
+                onClick:()=>copyItem(server.id,'Server ID'),dividerBefore:true},
+              {id:'roles',label:'Manage roles',icon:<Shield size={16}/>,disabled:server.owner_id!==me,
+                onClick:()=>{serverSelect(server.id);openModal('roles');}},
+              {id:'boost',label:'Server boosts',icon:<Gem size={16}/>,
+                onClick:()=>{serverSelect(server.id);openModal('boost');}}
+            ]})}
             style={{ '--bubble-color': server.accent_color || colors[index % colors.length] } as CSSProperties}>
             {initials(server.name)}
           </button>)}
@@ -660,12 +675,30 @@ function App() {
           {view === 'channel' || selectedServer ? <div className="channel-nav">
             {channels.filter(c => !query || c.name.toLowerCase().includes(query.toLowerCase())).map(ch => <button
               key={ch.id} className={'channel-button ' + (selectedChannel === ch.id && view === 'channel' ? 'selected' : '')}
+              onContextMenu={event=>openContext(event,{title:'# '+ch.name,actions:[
+                {id:'open',label:'Open channel',icon:<Hash size={16}/>,onClick:()=>{
+                  setSelectedChannel(ch.id);setView('channel');setSelectedFriend(null);
+                }},
+                {id:'name',label:'Copy channel name',icon:<Copy size={16}/>,
+                  onClick:()=>copyItem('#'+ch.name,'Channel name')},
+                {id:'id',label:'Copy channel ID',icon:<Hash size={16}/>,
+                  onClick:()=>copyItem(ch.id,'Channel ID'),dividerBefore:true}
+              ]})}
               onClick={() => { setSelectedChannel(ch.id); setView('channel'); setSelectedFriend(null); }}>
               <Hash size={17} /><span>{ch.name}</span></button>)}
             {channels.length === 0 && <div className="sidebar-empty">No channels yet.</div>}
           </div> : <div className="dm-nav">
             {friends.filter(f => f.status === 'accepted').map(friend => <button
               key={friend.id} className={'dm-button ' + (selectedFriend === friend.id && view === 'dm' ? 'selected' : '')}
+              onContextMenu={event=>openContext(event,{title:friend.username,actions:[
+                {id:'message',label:'Send message',icon:<MessageCircle size={16}/>,onClick:()=>{
+                  setSelectedFriend(friend.id);setView('dm');
+                }},
+                {id:'copy-name',label:'Copy username',icon:<Copy size={16}/>,
+                  onClick:()=>copyItem(friend.username,'Username')},
+                {id:'copy-id',label:'Copy user ID',icon:<Hash size={16}/>,
+                  onClick:()=>copyItem(friend.id,'User ID'),dividerBefore:true}
+              ]})}
               onClick={() => { setSelectedFriend(friend.id); setView('dm'); }}>
               <Avatar name={friend.username} size="tiny" /> <span>{friend.username}</span>
               <span className="dm-dot" /></button>)}
@@ -676,7 +709,7 @@ function App() {
             <div className="user-details"><strong>{username || 'ZuzuCord'}</strong>
               <span>{userRoles.includes('owner')?'Owner':userRoles.includes('developer')?'Developer':userRoles.includes('verified')?'Verified':
                 beta||userRoles.includes('beta_tester')?'Beta tester':'Member'} · Signed in</span></div>
-            <IconButton label="Profile" onClick={() => { setModalValue(profileName); setModalOther(profileStatus); setModal('profile'); }}><Settings2 size={18} /></IconButton>
+            <IconButton label="User settings" onClick={() => openModal('settings')}><Settings2 size={18} /></IconButton>
           </div>
         </section>
         <section className="main-pane">
@@ -706,7 +739,7 @@ function App() {
               <IconButton label="Refresh" onClick={() => view === 'friends' ? void loadFriends() : view === 'channel'
                 ? void loadMessages() : void loadDMs()}><RefreshCw size={19} /></IconButton>
               <IconButton label={rightPanel ? 'Hide activity panel' : 'Show activity panel'}
-                onClick={() => setRightPanel(!rightPanel)}>{rightPanel ? <PanelRightClose size={19} /> : <PanelRightOpen size={19} />}</IconButton>
+                onClick={() => setClientPreferences(prev=>({...prev,showActivityPanel:!rightPanel}))}>{rightPanel ? <PanelRightClose size={19} /> : <PanelRightOpen size={19} />}</IconButton>
               <IconButton label="Appearance settings" onClick={() => openModal('settings')}><SlidersHorizontal size={20} /></IconButton>
             </div>
           </div>
@@ -715,7 +748,20 @@ function App() {
               onChange={e => setQuery(e.target.value)} /></div>
             <div className="list-label">{tab === 'online' ? 'PRESENCE' : tab === 'pending' ? 'PENDING REQUESTS' : 'ALL FRIENDS'} — {displayedFriends.length}</div>
             {displayedFriends.length ? <div className="friend-list">
-              {displayedFriends.map(friend => <div className="friend-row" key={friend.requestId}>
+              {displayedFriends.map(friend => <div className="friend-row" key={friend.requestId}
+                onContextMenu={event=>openContext(event,{title:friend.username,actions:[
+                  {id:'message',label:'Message friend',icon:<MessageCircle size={16}/>,
+                    disabled:friend.status!=='accepted',onClick:()=>{
+                      setSelectedFriend(friend.id);setView('dm');
+                    }},
+                  {id:'username',label:'Copy username',icon:<Copy size={16}/>,
+                    onClick:()=>copyItem(friend.username,'Username')},
+                  {id:'id',label:'Copy user ID',icon:<Hash size={16}/>,
+                    onClick:()=>copyItem(friend.id,'User ID'),dividerBefore:true},
+                  {id:'accept',label:'Accept friend request',icon:<UserCheck size={16}/>,
+                    disabled:friend.status!=='pending'||friend.outgoing,
+                    onClick:()=>void friendDecision(friend.requestId,true)}
+                ]})}>
                 <Avatar name={friend.username} />
                 <div className="friend-row-text"><strong>{friend.username}</strong>
                   <small>{friend.status === 'pending'
@@ -743,7 +789,16 @@ function App() {
                   ? 'This is the beginning of the channel. Be respectful and enjoy your community.'
                   : 'Private messages are shared only between you and this accepted friend.'}</p>
               </div>
-              {messageRows.map(message => <div className="chat-message" key={message.id}>
+              {messageRows.map(message => <div className="chat-message" key={message.id}
+                onContextMenu={event=>openContext(event,{title:'Message options',actions:[
+                  {id:'copy',label:'Copy message',icon:<Copy size={16}/>,
+                    onClick:()=>copyItem(message.content,'Message')},
+                  {id:'message-id',label:'Copy message ID',icon:<Hash size={16}/>,
+                    onClick:()=>copyItem(message.id,'Message ID'),dividerBefore:true},
+                  {id:'author-id',label:'Copy author ID',icon:<Users size={16}/>,
+                    onClick:()=>copyItem('author_id' in message ?
+                      String(message.author_id):String(message.sender_id),'Author ID')}
+                ]})}>
                 <Avatar name={getAuthorName(message)} size="normal"
                   color={message.bot_name || message.external_bot_id ? '#9275ff' : undefined} />
                 <div className="message-text">
