@@ -1,7 +1,7 @@
 {
   "name": "zuzucord-desktop",
   "productName": "ZuzuCord",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "ZuzuCord React desktop client for Windows",
   "private": true,
   "main": "electron/main.cjs",
@@ -17,7 +17,8 @@
     "@supabase/supabase-js": "^2.76.1",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "electron-updater": "6.6.2"
   },
   "devDependencies": {
     "@types/node": "^22.18.6",
@@ -58,7 +59,16 @@
       "include": "build/installer.nsh",
       "uninstallDisplayName": "ZuzuCord",
       "deleteAppDataOnUninstall": false,
-      "runAfterFinish": true
-    }
+      "runAfterFinish": true,
+      "perMachine": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "taithedev",
+        "repo": "Zuzucord",
+        "releaseType": "release"
+      }
+    ]
   }
 }
