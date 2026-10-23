@@ -999,3 +999,18 @@ padding:10px;border-radius:8px;font-size:11px}
  width:100%;border:0;border-radius:5px;color:#ebdff3;text-align:left;cursor:pointer}
 .mention-picker button:hover,.mention-picker button:focus-visible{background:#4b2e60;outline:none}
 @media(max-width:760px){.chat-attachment{max-width:100%}.composer-stack .composer{min-height:49px}}
+
+
+/* Owner feature-flag console */
+.owner-section-title{display:flex;align-items:center;gap:9px;margin:21px 0 12px;font-size:15px;color:#f0e6fc}
+.owner-feature-section{margin-top:22px;padding-top:7px;border-top:1px solid #ffffff1a}
+.owner-feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px;margin:16px 0}
+.owner-feature-card{border:1px solid #ffffff15;background:linear-gradient(135deg,#25182e,#1a1221);
+ padding:13px;border-radius:11px;display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+.owner-feature-card strong{font-size:13px;color:#f4ebfa}
+.owner-feature-card small{font-size:11px;line-height:1.4;color:#bdb0c6}
+.owner-feature-card .feature-state-off,.owner-feature-card .feature-state-on{
+ font-size:10px;border:1px solid #ffffff25;padding:4px 7px;border-radius:30px}
+.owner-feature-card .feature-state-off{color:#ffb1ac;border-color:#e569685a;background:#d7424d1c}
+.owner-feature-card .feature-state-on{color:#abedc6;border-color:#37c88355;background:#1bca6710}
+.owner-feature-form{margin-top:12px}
