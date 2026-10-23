@@ -242,6 +242,16 @@ export const appApi = {
   deleteServerRole: async(serverId:string,roleId:string):Promise<void> => {
     checked(await client.rpc('zuzucord_delete_server_role',{p_server:serverId,p_role:roleId}));
   },
+  getFeatureRules: async():Promise<Array<{feature:string;target_user:string|null;enabled:boolean;updated_at:string}>> =>
+    checked(await client.from('zuzucord_feature_rules')
+      .select('feature,target_user,enabled,updated_at').order('feature')) || [],
+  setFeatureRule: async(feature:string,target:string|null,enabled:boolean|null):Promise<void> => {
+    checked(await client.rpc('zuzucord_set_feature_rule',{
+      p_feature:feature,p_target:target,p_enabled:enabled
+    }));
+  },
+  featureAllowed: async(feature:string):Promise<boolean> =>
+    checked(await client.rpc('zuzucord_feature_allowed',{p_feature:feature}))===true,
   managePlatformRole: async(target:string,role:'developer'|'verified'|'beta_tester',enabled:boolean):Promise<void> => {
     checked(await client.rpc('zuzucord_manage_platform_role',{
       p_target:target,p_role:role,p_enabled:enabled
