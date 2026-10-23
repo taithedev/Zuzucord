@@ -243,7 +243,7 @@ function App() {
   const currentRole = members.find(m => m.user_id === me)?.role;
   const canCreateChannel = serverPermissions.manage_channels;
   const mentionPart=view==='channel'&&selectedServer
-    ? /(?:^|\\s)@([a-z0-9_-]{0,32})$/i.exec(draft)?.[1] : undefined;
+    ? /(?:^|\s)@([a-z0-9_-]{0,32})$/i.exec(draft)?.[1] : undefined;
   const mentionChoices=mentionPart===undefined?[]:members
     .filter(m=>m.username.toLowerCase().includes(mentionPart.toLowerCase())).slice(0,7);
   const knownMentions=useMemo(()=>new Set(
