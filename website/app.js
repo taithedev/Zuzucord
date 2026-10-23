@@ -25,8 +25,8 @@
       { id: 'download-win', expression: /^ZuzuCord-React-\d+\.\d+\.\d+-x64\.exe$/i, label: 'Download Windows installer ↗' },
       { id: 'download-mac-intel', expression: /^ZuzuCord-Mac-\d+\.\d+\.\d+-x64\.dmg$/i, label: 'Download Intel DMG ↗' },
       { id: 'download-mac-arm', expression: /^ZuzuCord-Mac-\d+\.\d+\.\d+-arm64\.dmg$/i, label: 'Download Apple Silicon DMG ↗' },
-      { id: 'download-linux-appimage', expression: /^ZuzuCord-Linux-\d+\.\d+\.\d+-x64\.AppImage$/i, label: 'Download AppImage ↗' },
-      { id: 'download-linux-deb', expression: /^ZuzuCord-Linux-\d+\.\d+\.\d+-x64\.deb$/i, label: 'Download DEB ↗' }
+      { id: 'download-linux-appimage', expression: /^ZuzuCord-Linux-\d+\.\d+\.\d+-(?:x64|x86_64)\.AppImage$/i, label: 'Download AppImage ↗' },
+      { id: 'download-linux-deb', expression: /^ZuzuCord-Linux-\d+\.\d+\.\d+-(?:x64|amd64)\.deb$/i, label: 'Download DEB ↗' }
     ];
     for (const platform of platforms) {
       const element = $(platform.id);
