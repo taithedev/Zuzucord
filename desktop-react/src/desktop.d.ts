@@ -4,6 +4,7 @@ declare global {
   interface UpdateState { phase:UpdatePhase; version:string; percent:number; message:string; }
   interface Window {
     zuzuDesktop?: {
+      platform: 'win32' | 'darwin' | 'linux';
       secureGet(key: string): Promise<string | null>;
       secureSet(key: string, value: string): Promise<boolean>;
       secureRemove(key: string): Promise<void>;
