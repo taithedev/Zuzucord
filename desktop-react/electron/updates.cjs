@@ -1,5 +1,5 @@
 'use strict';
-// First install is handled by NSIS. Subsequent versions are downloaded in
+// Windows installation is handled by NSIS. Subsequent Windows versions are downloaded in
 // the background and installed over the existing app by electron-updater.
 // The only allowed feed is the official public taithedev/Zuzucord GitHub repo.
 const { app, net, BrowserWindow } = require('electron');
@@ -67,7 +67,9 @@ autoUpdater.on('error', error => {
 
 async function checkForUpdates() {
   if (!app.isPackaged || process.platform !== 'win32') {
-    send({ phase:'unavailable', message:'Auto updates run in the installed Windows application only.' });
+    send({ phase:'unavailable', message:process.platform==='win32'
+      ? 'Automatic updates require the installed Windows application.'
+      : 'Automatic installation is not enabled on macOS or Linux. Use GitHub Releases for manual updates.' });
     return currentState();
   }
   if (state.phase === 'ready' || state.phase === 'downloading') return currentState();
@@ -97,7 +99,7 @@ async function checkForUpdates() {
 
 function restartAndInstall() {
   if (state.phase !== 'ready') throw Error('No fully downloaded update is ready.');
-  // NSIS starts silently and relaunches the updated ZuzuCord app.
+  // Windows NSIS starts silently and relaunches the updated ZuzuCord app.
   setImmediate(() => autoUpdater.quitAndInstall(true, true));
   return { ok:true };
 }
