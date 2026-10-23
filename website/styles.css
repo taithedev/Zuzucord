@@ -147,3 +147,27 @@ html{scrollbar-color:#343439 #050505}
 .crystal-showcase-lead>p{font-size:12px}
 }
 @media(prefers-reduced-motion:reduce){.crystal-tier-card{transition:none}.feature-grid .feature{transition:none}}
+
+
+/* Modern ZuzuCord visual refresh — subtle violet glow, glass panels, and accessible motion. */
+body{background:radial-gradient(ellipse 95vw 600px at 80% 0%,#33144833 0,transparent 67%),
+radial-gradient(ellipse 70vw 580px at -5% 15%,#17105250 0,transparent 75%),var(--bg)}
+.topbar{background:rgba(12,9,17,.83);border-color:#3f2d453f}
+.brandmark{box-shadow:0 0 20px #9d63e72a}
+.version-tag{border:1px solid #70558f70}
+.hero .hero-copy{position:relative;z-index:1}
+.hero .hero-copy h1{letter-spacing:-.055em;text-wrap:balance}
+.preview-wrap{filter:drop-shadow(0 22px 38px #310d4c30)}
+.preview-window{border:1px solid #7d659250}
+.preview-window .preview-chat{background:radial-gradient(circle at 90% 0%,#45174f35,transparent 55%)}
+.preview-window .preview-rail{background:linear-gradient(180deg,#271133,#130c1d)}
+.feature-grid .feature{background:linear-gradient(140deg,#1b1522,#111014 76%);border-color:#4d39533d;
+transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+.feature-grid .feature:hover{transform:translateY(-3px);border-color:#815aad;
+box-shadow:0 15px 28px #06020c65,0 0 0 1px #a37ddd12}
+.feature-grid .feature a{color:#c3a6ff;text-decoration:underline;text-underline-offset:3px}
+.button{transition:transform .15s ease,box-shadow .2s ease,background .2s ease}
+.button:hover{transform:translateY(-2px)}
+#community .stat,#stats .stat{border-color:#5a42583a}
+#community .stat:hover,#stats .stat:hover{border-color:#9a72c274}
+@media(prefers-reduced-motion:reduce){.feature-grid .feature,.button{transition:none!important;transform:none!important}}
