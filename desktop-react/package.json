@@ -96,12 +96,12 @@
       "category": "Network",
       "maintainer": "ZuzuCord Contributors",
       "synopsis": "ZuzuCord community messaging and social desktop application",
-      "desktopName": "ZuzuCord",
       "syncDesktopName": true
     }
   },
   "homepage": "https://github.com/taithedev/Zuzucord",
   "author": {
     "name": "ZuzuCord Contributors"
-  }
+  },
+  "desktopName": "com.zuzify.zuzucord.desktop"
 }
