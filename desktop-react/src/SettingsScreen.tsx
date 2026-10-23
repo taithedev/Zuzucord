@@ -50,7 +50,12 @@ const gradientPresets = [
   {name:'Abyss',colors:['#06292f','#133a4f','#05090e','#0b182b']},
   {name:'Ember',colors:['#38121a','#47231b','#0b080d','#221323']},
   {name:'Carbon',colors:['#1d1d24','#2c3039','#020305','#15171d']},
-  {name:'Orchid',colors:['#250e3a','#572d5c','#0c0616','#270c34']}
+  {name:'Orchid',colors:['#250e3a','#572d5c','#0c0616','#270c34']},
+  {name:'Aurora',colors:['#063539','#154763','#08131d','#10505c']},
+  {name:'Rose Quartz',colors:['#392039','#57324f','#160e1b','#402f47']},
+  {name:'Neon Noir',colors:['#230039','#4b0d61','#07050d','#260c3e']},
+  {name:'Winter',colors:['#122a39','#2b5164','#071219','#1b3646']},
+  {name:'Obsidian',colors:['#141419','#27202b','#030406','#18121f']}
 ] as const;
 function colorFromCSS(source:string,keys:string[]):string|undefined {
   for(const key of keys) {
@@ -210,7 +215,24 @@ export function SettingsScreen(props:Props) {
       const parsed=JSON.parse(await file.text()) as {format?:string;appearance?:unknown;preferences?:Record<string,unknown>};
       if(parsed.format!=='zuzucord-theme-v1'||!parsed.appearance)throw Error('Invalid ZuzuCord theme file.');
       setDraftTheme(validateAppearance(parsed.appearance));
-      notice('Theme imported into the preview. Save Appearance to apply.');
+      const imported=parsed.preferences;
+      if(imported && typeof imported==='object'){
+        const numberIn=(key:string,low:number,high:number,fallback:number)=>
+          typeof imported[key]==='number' && Number.isFinite(imported[key] as number)
+            ?Math.max(low,Math.min(high,imported[key] as number)):fallback;
+        onPreferences({...preferences,
+          fontScale:numberIn('fontScale',85,125,preferences.fontScale),
+          messageSpacing:imported.messageSpacing==='compact'?'compact':'comfortable',
+          messageStyle:imported.messageStyle==='cards'?'cards':'classic',
+          sidebarWidth:numberIn('sidebarWidth',220,380,preferences.sidebarWidth),
+          cornerRadius:numberIn('cornerRadius',4,24,preferences.cornerRadius),
+          serverIconScale:numberIn('serverIconScale',80,120,preferences.serverIconScale),
+          glowIntensity:numberIn('glowIntensity',0,100,preferences.glowIntensity),
+          backgroundPattern:imported.backgroundPattern==='grid'||imported.backgroundPattern==='dots'
+            ?imported.backgroundPattern:'none'
+        });
+      }
+      notice('Theme colors loaded into preview; device layout loaded. Save Appearance to apply colors.');
     }catch(error){notice(error instanceof Error?error.message:String(error),true);}
     finally{if(themeJsonRef.current)themeJsonRef.current.value='';}
   };
