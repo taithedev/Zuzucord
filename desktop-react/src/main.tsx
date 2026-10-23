@@ -4,7 +4,7 @@ import {
   ArrowLeft, Bell, Bot, Gem, Film, Eye, EyeOff, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Copy,
   Crown, Ellipsis, Gift, Globe2, Hash, Heart, Home, LockKeyhole, LogOut, Maximize2,
   MessageCircle, MessagesSquare, Minus, Moon, Palette, PanelRightClose, PanelRightOpen,
-  Plus, RefreshCw, Search, Send, Server as ServerIcon, Settings2, Shield,
+  Paperclip, FileText, Plus, RefreshCw, Search, Send, Server as ServerIcon, Settings2, Shield,
   ShieldCheck, SlidersHorizontal, Sparkles, Square, UserCheck, UserMinus, UserPlus,
   Users, UsersRound, WandSparkles, X
 } from 'lucide-react';
@@ -13,7 +13,7 @@ import {
   appApi, client, DEFAULT_APPEARANCE, emailForLogin, ensureAccount, getLocalAppearance,
   readableUser, registerUsername, saveLocalAppearance, validateAppearance,
   type Appearance, type Channel, type ChatMessage, type FriendRequest, type Member,
-  type MessageDM, type Server, type CustomServerRole, type CustomRoleAssignment
+  type MessageDM, type Server, type CustomServerRole, type CustomRoleAssignment, type ChatAttachment
 } from './api';
 import { ServerRolesEditor } from './ServerRolesEditor';
 import { OwnerConsole } from './OwnerConsole';
@@ -144,11 +144,48 @@ function Auth({ onSuccess }: { onSuccess: (session: Session) => void }) {
   </div>;
 }
 
+function AttachmentView({ message }: { message: ChatMessage }) {
+  const path = message.attachment_path;
+  const [url,setUrl]=useState('');
+  const [error,setError]=useState('');
+  useEffect(()=>{
+    if(!path)return;
+    let active=true;setUrl('');setError('');
+    void client.storage.from('zuzucord-message-files').createSignedUrl(path,1200)
+      .then(({data,error:issue})=>{
+        if(!active)return;
+        if(issue||!data?.signedUrl)setError('Attachment unavailable');
+        else setUrl(data.signedUrl);
+      });
+    return ()=>{active=false};
+  },[path]);
+  if(!path)return null;
+  const label=message.attachment_name||'Attachment';
+  const preview=message.attachment_type?.startsWith('image/');
+  return <div className="chat-attachment">
+    {!url ? <span className="attachment-loading"><Paperclip size={15}/>{error||'Loading attachment…'}</span> :
+      <a href={url} target="_blank" rel="noopener noreferrer" title={'Open '+label}>
+        {preview&&<img src={url} alt={label} loading="lazy" />}
+        <span><FileText size={17}/><span><strong>{label}</strong>
+          <small>{message.attachment_size ? Math.ceil(message.attachment_size/1024)+' KB' : 'View file'}</small>
+        </span></span>
+      </a>}
+  </div>;
+}
+function RichMessage({content,mentions}:{content:string;mentions:Set<string>}) {
+  return <>{content.split(/(@[a-z0-9_-]{2,32})/gi).map((part,index)=>
+    part.startsWith('@')&&mentions.has(part.slice(1).toLowerCase())
+      ? <span key={index} className="message-mention">{part}</span>
+      : <React.Fragment key={index}>{part}</React.Fragment>)}</>;
+}
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState(true);
+  const [notice, setNotice] = useState(()=>{
+    try{return localStorage.getItem('zuzucord_notice_accepted_v1')!=='yes';}
+    catch{return true;}
+  });
   const [acknowledge, setAcknowledge] = useState(false);
   const [appearance, setAppearance] = useState<Appearance>(getLocalAppearance);
   const [modal, setModal] = useState<ModalName>(null);
@@ -168,6 +205,8 @@ function App() {
   const [serverCustomRoles, setServerCustomRoles] = useState<CustomServerRole[]>([]);
   const [serverRoleAssignments, setServerRoleAssignments] = useState<CustomRoleAssignment[]>([]);
   const [draft, setDraft] = useState('');
+  const [pendingAttachment,setPendingAttachment]=useState<File|null>(null);
+  const attachmentInput=useRef<HTMLInputElement|null>(null);
   const [modalValue, setModalValue] = useState('');
   const [modalOther, setModalOther] = useState('');
   const [busy, setBusy] = useState(false);
@@ -203,6 +242,13 @@ function App() {
   const isOwner = !!currentServer && currentServer.owner_id === me;
   const currentRole = members.find(m => m.user_id === me)?.role;
   const canCreateChannel = serverPermissions.manage_channels;
+  const mentionPart=view==='channel'&&selectedServer
+    ? /(?:^|\s)@([a-z0-9_-]{0,32})$/i.exec(draft)?.[1] : undefined;
+  const mentionChoices=mentionPart===undefined?[]:members
+    .filter(m=>m.username.toLowerCase().includes(mentionPart.toLowerCase())).slice(0,7);
+  const knownMentions=useMemo(()=>new Set(
+    (view==='channel'?members.map(m=>m.username):[currentFriend?.username||''])
+      .filter(Boolean).map(n=>n.toLowerCase())),[view,members,currentFriend?.username]);
 
   useEffect(() => {
     let alive = true;
@@ -451,22 +497,41 @@ function App() {
       void appApi.saveBeta(me, appearance, id).catch(showError);
     }
   };
+  useEffect(()=>{setPendingAttachment(null);},[selectedChannel,selectedFriend,view]);
+  const chooseFile=(file:File|undefined)=>{
+    if(!file)return;
+    if(file.size>10485760){setStatus('Attachment limit is 10 MB.');return;}
+    setPendingAttachment(file);
+  };
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || !me || busy) return;
+    if ((!text && !pendingAttachment) || !me || busy) return;
     setBusy(true);
+    let orphanPath='';
     try {
-      if (view === 'dm' && selectedFriend) {
-        await appApi.sendDM(me, selectedFriend, text);
-        await loadDMs();
-      } else if (view === 'channel' && selectedChannel) {
-        await appApi.sendMessage(selectedChannel, !!selectedServer, me, text);
-        await loadMessages();
+      let attachment:ChatAttachment|undefined;
+      if(pendingAttachment){
+        if(view==='dm'&&selectedFriend){
+          attachment=await appApi.uploadChatAttachment(pendingAttachment,'dm',selectedFriend,me);
+        }else if(view==='channel'&&selectedChannel){
+          attachment=await appApi.uploadChatAttachment(pendingAttachment,
+            selectedServer?'server':'public',selectedChannel,me);
+        }else throw Error('Select a conversation before uploading.');
+        orphanPath=attachment.attachment_path;
       }
-      setDraft('');
-    } catch (error) { showError(error); }
-    finally { setBusy(false); }
+      if (view === 'dm' && selectedFriend) {
+        await appApi.sendDM(me, selectedFriend, text, attachment);
+        orphanPath='';await loadDMs();
+      } else if (view === 'channel' && selectedChannel) {
+        await appApi.sendMessage(selectedChannel, !!selectedServer, me, text, attachment);
+        orphanPath='';await loadMessages();
+      }
+      setDraft('');setPendingAttachment(null);
+    } catch (error) {
+      if(orphanPath)void appApi.discardChatAttachment(orphanPath).catch(()=>{});
+      showError(error);
+    } finally { setBusy(false); }
   };
 
   useEffect(() => {
@@ -604,7 +669,9 @@ function App() {
   const pendingCount = friends.filter(f => f.status === 'pending' && !f.outgoing).length;
   const messageRows = useMemo(() => (view === 'dm' ? directMessages.map(d => ({
     id: d.id, author_id: d.sender_id, content: d.content, created_at: d.created_at,
-    bot_name: null, external_bot_id: null
+    bot_name: null, external_bot_id: null,
+    attachment_path:d.attachment_path,attachment_name:d.attachment_name,
+    attachment_type:d.attachment_type,attachment_size:d.attachment_size
   })) : messages), [view, messages, directMessages]);
   const getAuthorName = (m: ChatMessage): string => {
     if (m.bot_name) return m.bot_name;
@@ -646,7 +713,10 @@ function App() {
         <h2>Welcome to ZuzuCord</h2>
         <p>ZuzuCord is an independent social client, not affiliated with Discord. Accounts may be restricted for breaking community rules. The developers cannot guarantee that misuse won't result in restrictions. Your legal rights are not waived by this notice.</p>
         <label className="check-line"><input type="checkbox" checked={acknowledge} onChange={e => setAcknowledge(e.target.checked)} /> I understand and agree to follow the community guidelines.</label>
-        <button className="button button-primary full" disabled={!acknowledge} onClick={() => setNotice(false)}>Continue to ZuzuCord <ChevronRight size={16} /></button>
+        <button className="button button-primary full" disabled={!acknowledge} onClick={() => {
+          try{localStorage.setItem('zuzucord_notice_accepted_v1','yes');}catch{/* storage unavailable */}
+          setNotice(false);
+        }}>Continue to ZuzuCord <ChevronRight size={16} /></button>
       </div>
     </div> : !session ? <Auth onSuccess={async next => {
       setSession(next);
@@ -871,20 +941,40 @@ function App() {
                   <div className="message-meta"><strong>{getAuthorName(message)}</strong>
                     {(message.bot_name || message.external_bot_id) && <span className="bot-tag">BOT</span>}
                     <time>{dateTime(message.created_at)}</time></div>
-                  <div className="message-content">{message.content}</div>
+                  <div className="message-content"><RichMessage content={message.content} mentions={knownMentions}/></div>
+                  <AttachmentView message={message} />
                 </div>
               </div>)}
               <div ref={messagesBottom} />
             </div>
-            <form className="composer" onSubmit={send}>
-              <button type="button" title="Attachments are not yet available" disabled><Plus size={20}/></button>
-              <input value={draft} maxLength={2000} onChange={e=>setDraft(e.target.value)}
-                placeholder={view === 'channel' && selectedServer
-                  ? 'Message #' + (currentChannel?.name || 'channel') + ' or use /help for ZuzuBot'
-                  : 'Message ' + (view === 'dm' ? '@' + (currentFriend?.username || 'friend') : '#public')}
-                disabled={busy || (view === 'channel' && !selectedChannel) || (view === 'dm' && !selectedFriend)} />
-              <button className="composer-send" aria-label="Send message" disabled={busy || !draft.trim()}><Send size={19}/></button>
-            </form>
+            <div className="composer-stack">
+              {mentionChoices.length>0&&<div className="mention-picker" role="listbox" aria-label="Mention a member">
+                {mentionChoices.map(member=><button key={member.user_id} type="button"
+                  onClick={()=>setDraft(previous=>previous.replace(/@[a-z0-9_-]*$/i,'@'+member.username+' '))}>
+                  <Avatar name={member.username} size="tiny"/><span>@{member.username}</span>
+                </button>)}
+              </div>}
+              {pendingAttachment&&<div className="composer-attachment">
+                <Paperclip size={15}/><strong>{pendingAttachment.name}</strong>
+                <small>{Math.ceil(pendingAttachment.size/1024)} KB</small>
+                <button type="button" onClick={()=>setPendingAttachment(null)} aria-label="Remove attachment"><X size={15}/></button>
+              </div>}
+              <form className="composer" onSubmit={send}
+                onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();chooseFile(e.dataTransfer.files[0]);}}>
+                <input ref={attachmentInput} type="file" className="file-input-hidden"
+                  accept="image/png,image/jpeg,image/webp,image/gif,text/plain,application/pdf,audio/mpeg,audio/ogg,video/mp4"
+                  onChange={e=>{chooseFile(e.currentTarget.files?.[0]);e.currentTarget.value='';}}/>
+                <button type="button" title="Attach image, document, audio or video (max 10 MB)"
+                  disabled={busy} onClick={()=>attachmentInput.current?.click()}><Plus size={20}/></button>
+                <input value={draft} maxLength={2000} onChange={e=>setDraft(e.target.value)}
+                  placeholder={busy?'Sending…':view === 'channel' && selectedServer
+                    ? 'Message #' + (currentChannel?.name || 'channel') + ' • @mention members'
+                    : 'Message ' + (view === 'dm' ? '@' + (currentFriend?.username || 'friend') : '#public')}
+                  disabled={busy || (view === 'channel' && !selectedChannel) || (view === 'dm' && !selectedFriend)} />
+                <button className="composer-send" aria-label="Send message"
+                  disabled={busy || (!draft.trim()&&!pendingAttachment)}><Send size={19}/></button>
+              </form>
+            </div>
           </div>}
         </section>
         {rightPanel && view!=='socials' && <aside className="activity-panel">

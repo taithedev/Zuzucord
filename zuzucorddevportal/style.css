@@ -6,3 +6,19 @@
 #credit-form h3{letter-spacing:-.3px;font-size:18px}
 #credit-form .primary{background:#b6e3ef;color:#0a141a;font-weight:800}
 #credit-form .primary:hover{background:#e5f7fc}
+
+
+/* Professional developer console polish: readable application forms and focused cards. */
+body{background:radial-gradient(ellipse 70vw 520px at 75% -12%,#3e19594d,transparent 75%),#07050a}
+.top{background:#0d0914ed;backdrop-filter:blur(14px);border-color:#694b784f}
+.rail{background:linear-gradient(180deg,#160e1d,#0d0a12)}
+.rail a:focus-visible,.panel button:focus-visible{outline:2px solid #b895ff;outline-offset:2px}
+.hero{background:linear-gradient(120deg,#261238,#1a1127 70%,#14101b);border:1px solid #77568e44}
+.panel{border-color:#5f437547;box-shadow:0 9px 25px #08040d35}
+button.primary,.primary{background:linear-gradient(110deg,#9469ef,#6849ce);box-shadow:0 4px 15px #7249cb33}
+button.primary:hover,.primary:hover{background:linear-gradient(110deg,#aa86ff,#8160df)}
+input,textarea,select{outline-offset:2px;accent-color:#b38aff}
+input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #9e77e1}
+#api pre{white-space:pre-wrap;overflow-wrap:anywhere}
+#api a{text-decoration:underline;text-underline-offset:4px;color:#c6aaff}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
