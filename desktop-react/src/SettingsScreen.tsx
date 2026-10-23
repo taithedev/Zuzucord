@@ -3,7 +3,7 @@ import { BadgeCheck, Bell, Check, ChevronRight, Cloud, Copy, Crown, ExternalLink
   EyeOff, Gem, Hash, KeyRound, LockKeyhole, LogOut, Monitor, Moon, Palette, RefreshCw,
   Shield, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Users, Volume2, X } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
-import { client, DEFAULT_APPEARANCE, type Appearance } from './api';
+import { client, DEFAULT_APPEARANCE, validateAppearance, type Appearance } from './api';
 import { type ClientPreferences, DEFAULT_CLIENT_PREFERENCES } from './clientPreferences';
 import { ProfileStudio } from './ProfileStudio';
 import { VoiceDiagnostics } from './VoiceDiagnostics';
@@ -37,7 +37,7 @@ const tabs: {group:string;links:{page:Page;label:string;icon:React.ElementType}[
   ]},
   {group:'ZUZUCORD',links:[
     {page:'updates',label:'Updates',icon:RefreshCw},
-    {page:'device',label:'Windows & Network',icon:Monitor},
+    {page:'device',label:'Device & Network',icon:Monitor},
     {page:'connections',label:'Website Sync',icon:Cloud},
     {page:'server-tools',label:'Server Tools',icon:Users},
     {page:'developer-tools',label:'Developer Portal',icon:KeyRound},
@@ -94,6 +94,9 @@ export function SettingsScreen(props:Props) {
   const [search,setSearch]=useState('');
   const [draftTheme,setDraftTheme]=useState(appearance);
   const themeFileRef=useRef<HTMLInputElement|null>(null);
+  const themeJsonRef=useRef<HTMLInputElement|null>(null);
+  const platform=window.zuzuDesktop?.platform || 'web';
+  const systemLabel=platform==='win32'?'Windows':platform==='darwin'?'macOS':platform==='linux'?'Linux':'this device';
   const [password,setPassword]=useState('');
   const [showPassword,setShowPassword]=useState(false);
   const [busy,setBusy]=useState(false);
@@ -130,7 +133,7 @@ export function SettingsScreen(props:Props) {
   };
   const saveAppearance=async()=>{
     setBusy(true);
-    try{await onAppearance(draftTheme);notice('Appearance saved for this Windows app'+(draftTheme.sync_enabled?' and website sync.':'.'));}
+    try{await onAppearance(draftTheme);notice('Appearance saved for this device'+(draftTheme.sync_enabled?' and website sync.':'.'));}
     catch(e){notice(e instanceof Error?e.message:String(e),true)}
     finally{setBusy(false)}
   };
@@ -145,7 +148,7 @@ export function SettingsScreen(props:Props) {
   };
   const changeStartup=async(enabled:boolean)=>{
     try{
-      if(!window.zuzuDesktop)throw Error('Windows installation required to change auto-start.');
+      if(!window.zuzuDesktop || platform!=='win32')throw Error('Auto-start is currently available only on the Windows installer.');
       const next=await window.zuzuDesktop.setStartup(enabled);
       setStartup(next);
       notice(next.enabled?'ZuzuCord will open at Windows sign-in.':'ZuzuCord will no longer start automatically.');
@@ -154,7 +157,7 @@ export function SettingsScreen(props:Props) {
   const testNetwork=async()=>{
     setNetworkBusy(true);
     try {
-      if(!window.zuzuDesktop)throw Error('Network diagnostics require the Windows application.');
+      if(!window.zuzuDesktop)throw Error('Network diagnostics require the desktop application.');
       const result=await window.zuzuDesktop.checkNetwork();
       setNetwork(result);
       notice('Connection checks completed.');
@@ -165,7 +168,7 @@ export function SettingsScreen(props:Props) {
     if(enabled){
       if(!('Notification' in window)){notice('Desktop notifications are unavailable on this device.',true);return;}
       const permission=await Notification.requestPermission();
-      if(permission!=='granted'){notice('Windows notification permission was not granted.',true);return;}
+      if(permission!=='granted'){notice('Desktop notification permission was not granted.',true);return;}
     }
     onPreferences({...preferences,desktopFriendAlerts:enabled});
     notice(enabled?'Friend request alerts enabled on this device.':'Friend request alerts disabled.');
@@ -192,6 +195,25 @@ export function SettingsScreen(props:Props) {
     }catch(error){notice(error instanceof Error?error.message:String(error),true);}
     finally{if(themeFileRef.current)themeFileRef.current.value='';}
   };
+  const exportTheme=()=>{
+    const payload={format:'zuzucord-theme-v1',appearance:draftTheme,preferences};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');link.href=url;link.download='zuzucord-theme.json';link.click();
+    window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+    notice('Theme preset exported.');
+  };
+  const importTheme=async(file?:File)=>{
+    if(!file)return;
+    try{
+      if(file.size>40000||!file.name.endsWith('.json'))throw Error('Choose a ZuzuCord JSON theme under 40 KB.');
+      const parsed=JSON.parse(await file.text()) as {format?:string;appearance?:unknown;preferences?:Record<string,unknown>};
+      if(parsed.format!=='zuzucord-theme-v1'||!parsed.appearance)throw Error('Invalid ZuzuCord theme file.');
+      setDraftTheme(validateAppearance(parsed.appearance));
+      notice('Theme imported into the preview. Save Appearance to apply.');
+    }catch(error){notice(error instanceof Error?error.message:String(error),true);}
+    finally{if(themeJsonRef.current)themeJsonRef.current.value='';}
+  };
   const copy=async(value:string)=>{
     try{await navigator.clipboard.writeText(value);notice('Copied to clipboard.');}
     catch{notice('Could not access clipboard.',true);}
@@ -206,7 +228,9 @@ export function SettingsScreen(props:Props) {
     '--gradient-a':draftTheme.gradient_start,'--gradient-middle':draftTheme.gradient_middle,
     '--gradient-b':draftTheme.gradient_end,'--gradient-accent':draftTheme.gradient_accent,
     '--gradient-angle':draftTheme.gradient_angle+'deg',
-    '--glow-position':draftTheme.glow_position+'%'} as CSSProperties;
+    '--glow-position':draftTheme.glow_position+'%',
+    '--ui-radius':preferences.cornerRadius+'px',
+    '--glow-intensity':String(preferences.glowIntensity/100)} as CSSProperties;
   return <div className="settings-screen" role="dialog" aria-modal="true" aria-label="ZuzuCord settings">
     <aside className="settings-navigation">
       <div className="settings-brand"><div className="settings-brand-logo">Z</div>
@@ -275,8 +299,8 @@ export function SettingsScreen(props:Props) {
           <button className="button button-primary" disabled={busy} type="submit"><KeyRound size={16}/> Change Password</button>
         </form>
         <div className="settings-stack"><Tile title="This device"
-          description="Saved sign-in is protected by Windows account encryption when available.">
-          <strong className="settings-right">Windows</strong></Tile>
+          description="Saved sign-in uses system encryption when available; otherwise session storage is temporary.">
+          <strong className="settings-right">{systemLabel}</strong></Tile>
           <Tile title="Sign out of this device" description="Close your active session and return to the login screen.">
             <SettingButton onClick={()=>void onLogout()}><LogOut size={15}/> Sign out</SettingButton></Tile></div>
         <p className="tiny muted">Multi-factor authentication and remote device management are not currently offered in ZuzuCord. We don't display fictional security statuses.</p>
@@ -300,7 +324,7 @@ export function SettingsScreen(props:Props) {
         <div className="settings-note"><Shield size={18}/> Messages, roles, servers, and friend requests remain protected by ZuzuCord's Supabase access rules. Local switches do not replace server-side privacy controls.</div>
       </Section>}
       {page==='notifications'&&<Section eyebrow="STAY UPDATED" title="Notifications"
-        description="Choose which alerts ZuzuCord shows on this Windows device.">
+        description="Choose which alerts ZuzuCord shows on this device.">
         <div className="settings-stack"><Tile title="New friend requests"
           description="A desktop alert when someone sends you a friend request. You can turn it off anytime.">
           <Toggle on={preferences.desktopFriendAlerts} label="Friend request notifications"
@@ -367,6 +391,46 @@ export function SettingsScreen(props:Props) {
             <label className="settings-range">Background glow <span>{draftTheme.glass_strength}%</span>
               <input type="range" min={0} max={100} value={draftTheme.glass_strength}
                 onChange={e=>change('glass_strength',Number(e.target.value))}/></label>
+            <div className="settings-subsection-heading"><strong>Workspace studio</strong><small>Applied immediately and stored on this device</small></div>
+            <label className="settings-range">Sidebar width <span>{preferences.sidebarWidth}px</span>
+              <input type="range" min="220" max="380" step="5" value={preferences.sidebarWidth}
+                onChange={e=>onPreferences({...preferences,sidebarWidth:Number(e.target.value)})}/></label>
+            <label className="settings-range">Corner rounding <span>{preferences.cornerRadius}px</span>
+              <input type="range" min="4" max="24" step="2" value={preferences.cornerRadius}
+                onChange={e=>onPreferences({...preferences,cornerRadius:Number(e.target.value)})}/></label>
+            <label className="settings-range">Server icon scale <span>{preferences.serverIconScale}%</span>
+              <input type="range" min="80" max="120" step="5" value={preferences.serverIconScale}
+                onChange={e=>onPreferences({...preferences,serverIconScale:Number(e.target.value)})}/></label>
+            <label className="settings-range">UI bloom intensity <span>{preferences.glowIntensity}%</span>
+              <input type="range" min="0" max="100" step="5" value={preferences.glowIntensity}
+                onChange={e=>onPreferences({...preferences,glowIntensity:Number(e.target.value)})}/></label>
+            <label className="settings-input-label">Background overlay</label>
+            <div className="settings-theme-selector">
+              {(['none','grid','dots'] as const).map(pattern=><button key={pattern} type="button"
+                className={preferences.backgroundPattern===pattern?'selected':''}
+                onClick={()=>onPreferences({...preferences,backgroundPattern:pattern})}>
+                {pattern==='none'?'Clean':pattern==='grid'?'Grid':'Dots'}</button>)}
+            </div>
+            <label className="settings-input-label">Message appearance</label>
+            <div className="settings-theme-selector">
+              {(['classic','cards'] as const).map(style=><button key={style} type="button"
+                className={preferences.messageStyle===style?'selected':''}
+                onClick={()=>onPreferences({...preferences,messageStyle:style})}>
+                {style==='classic'?'Classic rows':'Message cards'}</button>)}
+            </div>
+            <div className="settings-action-row">
+              <button type="button" className="button button-subtle" onClick={exportTheme}>Export theme JSON</button>
+              <button type="button" className="button button-subtle"
+                onClick={()=>themeJsonRef.current?.click()}>Import theme JSON</button>
+              <input ref={themeJsonRef} type="file" accept=".json,application/json" hidden
+                onChange={e=>void importTheme(e.target.files?.[0])}/>
+              <button type="button" className="button button-subtle" onClick={()=>{
+                onPreferences({...DEFAULT_CLIENT_PREFERENCES,fontScale:preferences.fontScale,
+                  desktopFriendAlerts:preferences.desktopFriendAlerts,showActivityPanel:preferences.showActivityPanel,
+                  highContrast:preferences.highContrast,messageSpacing:preferences.messageSpacing});
+                notice('Workspace layout restored to defaults.');
+              }}>Reset layout</button>
+            </div>
             <Tile title="Animated background" description="Subtle motion behind the workspace.">
               <Toggle on={draftTheme.motion_enabled} label="Animated background"
                 change={v=>change('motion_enabled',v)}/></Tile>
@@ -408,16 +472,16 @@ export function SettingsScreen(props:Props) {
         description="Check microphone permissions and test your input with a local audio sample.">
         <VoiceDiagnostics/>
       </Section>}
-      {page==='device'&&<Section eyebrow="WINDOWS DEVICE" title="Windows & Network"
+      {page==='device'&&<Section eyebrow="DESKTOP DEVICE" title="Device & Network"
         description="Control startup behavior and check ZuzuCord connectivity.">
         <div className="settings-stack">
-          <Tile title="Start with Windows" description="Off by default. If enabled, ZuzuCord launches after you sign in to Windows.">
+          <Tile title="Start with device" description={startup.available?'Start at Windows sign-in (off by default).':'Manual launch on macOS and Linux builds; auto-start is not configured.'}>
             <Toggle label="Launch at Windows sign-in" on={startup.enabled}
               disabled={!startup.available} change={v=>void changeStartup(v)}/></Tile>
-          <Tile title="Windows permissions" description="Runs as a standard app. Microphone access is requested only when needed, and Windows protects administrator actions.">
+          <Tile title="Device permissions" description="Uses standard app privileges. Microphone access is requested only when needed.">
             <strong className="settings-right">Standard user</strong></Tile>
         </div>
-        <div className="settings-note"><Shield size={18}/> ZuzuCord never requests permanent device-wide administrator access. Installation or individual system changes may require Windows approval.</div>
+        <div className="settings-note"><Shield size={18}/> ZuzuCord does not require permanent system administrator privileges. Some operating systems require approval for app installation.</div>
         <div className="settings-network-card">
           <div className="settings-network-title"><Monitor size={18}/>
             <div><strong>Network diagnostics</strong>
@@ -428,7 +492,7 @@ export function SettingsScreen(props:Props) {
             {networkBusy?'Checking…':'Test connections'}</button>
           {network&&<div className="settings-network-results">
             {Object.entries(network.targets).map(([name,result])=><div key={name}>
-              <span>{name==='supabase'?'Accounts & messaging':'Windows updates'}</span>
+              <span>{name==='supabase'?'Accounts & messaging':'GitHub releases'}</span>
               <strong className={result.reachable?'reachable':'unreachable'}>
                 {result.reachable?'Connected':'Unreachable'}
                 {result.latencyMs!=null?' · '+result.latencyMs+' ms':''}
@@ -446,7 +510,7 @@ export function SettingsScreen(props:Props) {
           <KeyRound size={16}/> Open Developer Workspace</button>
       </Section>}
       {page==='about'&&<Section eyebrow="ABOUT ZUZUCORD" title="Why choose ZuzuCord?"
-        description="An independent community platform with Windows-first customization.">
+        description="An independent community platform with customizable Windows, macOS and Linux clients.">
         <div className="settings-advantages">
           <article><Palette size={20}/><strong>More control over the look</strong>
             <p>OLED palettes, multi-layer gradients, accent colors, animated backgrounds and custom profile banners.</p></article>
@@ -454,8 +518,8 @@ export function SettingsScreen(props:Props) {
             <p>Channels, server roles, custom bots and a developer area managed in the same app.</p></article>
           <article><Sparkles size={20}/><strong>Crystals and Socials</strong>
             <p>Non-purchasable server boosts, personal posts and Moments, bookmarks and creator activity.</p></article>
-          <article><RefreshCw size={20}/><strong>Install once, update inside Windows</strong>
-            <p>Newer official installer releases download in the background and install on exit or restart.</p></article>
+          <article><RefreshCw size={20}/><strong>Desktop app across platforms</strong>
+            <p>Windows supports installed-app updates. macOS and Linux use downloadable releases while their updater support is being validated.</p></article>
         </div>
         <p className="tiny muted">ZuzuCord is not affiliated with Discord. These are project features, not a claim that ZuzuCord is safer or better for everyone. Voice calling and feature parity are still under development.</p>
       </Section>}
@@ -474,12 +538,14 @@ export function SettingsScreen(props:Props) {
               <RefreshCw size={16}/> Restart & Install</button>:
               <button className="button button-subtle" onClick={()=>void onCheckUpdates()}>
                 <RefreshCw size={16}/> Check for updates</button>}</div></div>
-        <p className="tiny muted">Downloaded updates install when the app closes or you choose Restart & Install. Portable ZIP builds do not use installed-app auto-updates.</p>
+        <p className="tiny muted">{platform==='win32'?'Windows NSIS installs downloaded updates when the app closes or you restart it. Portable ZIP builds do not auto-update.':'On macOS and Linux, use the published GitHub release packages for manual updates; automatic installation is not enabled.'}</p>
+         {platform!=='win32'&&<button className="button button-subtle" type="button"
+           onClick={()=>void window.zuzuDesktop?.openOfficialLink('releases')}>Open GitHub releases <ExternalLink size={15}/></button>}
       </Section>}
       {page==='connections'&&<Section eyebrow="CLOUD PREFERENCES" title="Website Sync"
         description="Sync OLED themes, gradients and your preferred server with your ZuzuCord account.">
         <div className="settings-stack"><Tile title="Account appearance sync"
-          description="Make your website and Windows theme use the same saved colors and effects.">
+          description="Sync supported colors and gradients between your account and website. Advanced layout options stay on each device.">
           <Toggle on={appearance.sync_enabled} label="Website sync"
             change={v=>void onAppearance({...appearance,sync_enabled:v})}/></Tile>
           <Tile title="Import website theme" description="Load your existing website colors into the theme editor.">
@@ -500,7 +566,7 @@ export function SettingsScreen(props:Props) {
       {feedback&&<div role={failed?'alert':'status'} className={'settings-feedback '+(failed?'error':'ok')}>
         {failed?<Shield size={15}/>:<Check size={15}/>} {feedback}
         <button onClick={()=>setFeedback('')} aria-label="Dismiss message"><X size={14}/></button></div>}
-      <footer className="settings-content-footer">ZuzuCord for Windows · Independent community application</footer>
+      <footer className="settings-content-footer">ZuzuCord for {systemLabel} · Independent community application</footer>
       </div>
     </main>
   </div>;
