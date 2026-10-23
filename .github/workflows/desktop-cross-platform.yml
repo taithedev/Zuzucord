@@ -1,0 +1,109 @@
+name: ZuzuCord macOS and Linux Desktop
+
+on:
+  pull_request:
+    paths:
+      - 'desktop-react/**'
+      - '.github/workflows/desktop-cross-platform.yml'
+  workflow_run:
+    workflows: ['ZuzuCord React Windows Desktop']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zuzucord-cross-platform-${{ github.event.workflow_run.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    name: Build ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Intel and Apple Silicon
+            os: macos-14
+            target: mac
+            build: build:mac
+          - name: Linux x64
+            os: ubuntu-24.04
+            target: linux
+            build: build:linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        working-directory: desktop-react
+        run: npm ci --no-audit --no-fund
+      - name: Validate updater policy
+        working-directory: desktop-react
+        run: npm test
+      - name: Set consistent cross-platform version
+        working-directory: desktop-react
+        shell: bash
+        run: |
+          VERSION="0.11.${{ github.event.workflow_run.run_number || github.run_number }}"
+          npm version "$VERSION" --no-git-tag-version
+      - name: Build native desktop packages
+        working-directory: desktop-react
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
+        run: npm run ${{ matrix.build }}
+      - name: Verify native installers are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.target }}" = "mac" ]; then
+            find desktop-react/release -maxdepth 1 -name '*.dmg' -size +1M | grep -q .
+            find desktop-react/release -maxdepth 1 -name '*.zip' -size +1M | grep -q .
+          else
+            find desktop-react/release -maxdepth 1 -name '*.AppImage' -size +1M | grep -q .
+            find desktop-react/release -maxdepth 1 -name '*.deb' -size +1M | grep -q .
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZuzuCord-${{ matrix.target }}
+          path: desktop-react/release/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    needs: [build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ZuzuCord-*
+          merge-multiple: true
+          path: cross-platform-release
+      - name: Attach Mac and Linux downloads to verified Windows release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v0.11.${{ github.event.workflow_run.run_number }}"
+          REPO="taithedev/Zuzucord"
+          gh release view "$TAG" --repo "$REPO"
+          shopt -s nullglob
+          FILES=(cross-platform-release/*.dmg cross-platform-release/*.zip
+            cross-platform-release/*.AppImage cross-platform-release/*.deb)
+          if [ "${#FILES[@]}" -lt 4 ]; then
+            echo "Cross-platform build files missing"
+            exit 1
+          fi
+          gh release upload "$TAG" "${FILES[@]}" --repo "$REPO" --clobber
