@@ -104,3 +104,16 @@ html{scrollbar-color:#343439 #050505}
 @media(max-width:900px){#community .community-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){#community .community-grid{grid-template-columns:1fr 1fr;gap:9px}#community .stat{min-height:116px;padding:17px 14px}#community .stat strong{font-size:clamp(24px,7vw,36px)}.community-source{width:100%;font-size:9px;line-height:1.8}}
 @media(prefers-reduced-motion:reduce){#community .stat{transition:none}}
+
+
+/* Beta showcase finish: purple ambient accents without changing live data or links. */
+body{background:radial-gradient(ellipse 76vw 540px at 84% 0%,#32164850 0%,transparent 72%),var(--bg)}
+.topbar{background:#0f0a16d9;border-color:#56416955}
+.brandmark{box-shadow:0 0 22px #a878ee42}
+.preview-wrap{filter:drop-shadow(0 20px 35px #3e1b6e44)}
+.preview-window{border:1px solid #76539b73}
+.feature-grid .feature{border-color:#634b783b;background:linear-gradient(145deg,#1a1523,#101013)}
+.feature-grid .feature:hover{transform:translateY(-3px);border-color:#b48bfb;
+box-shadow:0 18px 30px #05030977}
+.feature-grid .feature{transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+@media(prefers-reduced-motion:reduce){.feature-grid .feature{transform:none!important;transition:none!important}}
