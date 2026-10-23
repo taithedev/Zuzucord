@@ -1,6 +1,6 @@
 # ZuzuCord React Desktop (Windows)
 
-This is the **new Windows-native desktop interface** using **React 19 + TypeScript + Electron**, following the supplied Discord interface layout reference: dual navigation rails, Friends and DMs, communities, channels, chat and an optional right activity sidebar. It does **not** embed discord.com and is not the Discord client. It connects directly to **your own ZuzuCord Supabase backend**.
+This is the **cross-platform desktop interface** for **Windows, macOS, and Linux**, using **React 19 + TypeScript + Electron**, following the supplied Discord interface layout reference: dual navigation rails, Friends and DMs, communities, channels, chat and an optional right activity sidebar. It does **not** embed discord.com and is not the Discord client. It connects directly to **your own ZuzuCord Supabase backend**.
 
 The existing working **C# / Siticone WinForms project remains in `src/ZuzuCord`** during this UI transition. Both clients share the existing `zuzucord_` backend tables and authorization rules, but they are separate executables.
 
@@ -38,9 +38,19 @@ npm run build:win
 
 The packaging script creates a valid 256×256 Windows icon from your existing `website/assets/zuzucord-icon.webp` using Sharp, then builds an NSIS setup and portable ZIP under `release/`. GitHub Actions builds the same targets from `.github/workflows/react-desktop.yml`.
 
+## Native platform builds
+
+The Electron client supports **Windows x64** (NSIS installer and ZIP), **macOS Intel x64 and Apple Silicon arm64** (DMG and ZIP), and **Linux x64** (AppImage and DEB).
+
+- Windows: `npm run build:win` on Windows; the existing GitHub release workflow tests installation, repairs, and verified background auto-updates.
+- macOS: `npm run build:mac` on macOS. The build generates a native `.icns` icon using Apple's `iconutil`, then packages Intel and Apple Silicon app bundles. **Preview builds are unsigned and unnotarized, so macOS security protection can prevent normal launching.** Public distribution needs Apple Developer ID signing and notarization.
+- Linux: `npm run build:linux` on Linux for x64 AppImage and DEB packages with a native ZuzuCord PNG icon.
+- The additional `.github/workflows/desktop-cross-platform.yml` verifies macOS and Linux packaging and attaches resulting installer files to the matching successful Windows GitHub release. It builds only from the successful main-branch release commit.
+- macOS and Linux updates are currently **manual** through GitHub Releases; Windows installed-app background auto-updates remain unchanged. Compatibility on individual OS distributions/devices has not been fully tested.
+
 ## Appearance controls
 
-Open **Themes** or the left palette icon. Customize OLED/Graphite/Midnight, six accent swatches or a color picker, a two-stop radial gradient, glass/glow strength, compact view and animated ambient background. UI changes save in the desktop user profile. **Every registered ZuzuCord user** can sync preferences and preferred server with the main production website; production preferences are stored in `zuzucord_user_sync` with per-user RLS; the original beta table remains separate.
+Open **Settings → Appearance & Themes**. Customize OLED/Graphite/Midnight, gradient studio presets, custom accent and layer colors, glass/glow strength, compact view, animation, sidebar width, UI corner rounding, server-icon scaling, bloom intensity, grid/dot overlays, and classic versus card-style messages. Export and import safe ZuzuCord JSON theme presets. UI changes save in the desktop user profile. **Every registered ZuzuCord user** can sync preferences and preferred server with the main production website; production preferences are stored in `zuzucord_user_sync` with per-user RLS; the original beta table remains separate.
 
 Use the Windows system's reduced-motion preference to disable animation.
 
@@ -57,7 +67,7 @@ Use the Windows system's reduced-motion preference to disable animation.
 
 Sign in, username registration, user profile, public text channels, member-only servers, create/join servers, create channels, friend requests, accepted-friend DMs, server members, owner/admin role changes, ZuzuBot commands, active activity summaries, optional beta appearance sync, and Windows UI personalization.
 
-**Not implemented**: Discord API interoperability, official Discord identity, voice/video calls, live games/activities, attachments, platform-wide public presence, notifications, and a bot hosting platform. The Friends > Online tab displays real check-ins from active ZuzuCord React users, visible only to accepted friends through Supabase RLS. No synthetic active users are shown. The Activity sidebar uses only actual ZuzuCord server/friend data.
+**Not implemented**: Discord API interoperability, official Discord identity, voice/video calls, live games/activities, platform-wide public presence, message push notifications, and fully managed third-party bot hosting. Chat file attachments and Python bot token API examples are available. The Friends > Online tab displays real check-ins from active ZuzuCord React users, visible only to accepted friends through Supabase RLS. No synthetic active users are shown. The Activity sidebar uses only actual ZuzuCord server/friend data.
 
 The app is a **preview**. Type checking and packaging in CI do not replace real Windows UI testing, Supabase multi-user testing, accessibility checks, and signing the release before wide distribution.
 
@@ -90,3 +100,10 @@ The public website also displays the **real total number of server boosts** from
 ## Installed-app automatic updater (v0.11+)
 
 The Windows `.exe` is installed **once**. After installation, ZuzuCord automatically checks its official GitHub release feed on startup and about every four hours, downloads updates in the background, displays progress, and installs the downloaded update automatically on normal app exit. **Restart & update** is available when the download completes. The update metadata `latest.yml`, matching NSIS setup installer, and `.blockmap` are uploaded together with a stable tag (such as `v0.11.77`). This workflow does not apply to portable ZIP usage; see [UPDATES.md](UPDATES.md). Unsigned preview installer updates still need signing and real Windows end-to-end tests.
+
+
+## Welcome screen and local layout preferences
+
+The redundant **“Welcome to ZuzuCord”** startup overlay has been removed from the React desktop client. Existing login and registration remain, but no repeated click-through is required. No bypass of server-side authentication or moderation rules is involved.
+
+Local workspace preferences are saved by device and include theme glow, sidebar width, corner rounding, icon scale, background texture and message-row style. Saved themes can be exported or imported as inert JSON; downloaded CSS theme imports only parse approved color tokens and never execute code. The website's supported account color sync stays separate from newer device-only layout options.
