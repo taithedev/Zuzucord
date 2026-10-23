@@ -1014,3 +1014,45 @@ padding:10px;border-radius:8px;font-size:11px}
 .owner-feature-card .feature-state-off{color:#ffb1ac;border-color:#e569685a;background:#d7424d1c}
 .owner-feature-card .feature-state-on{color:#abedc6;border-color:#37c88355;background:#1bca6710}
 .owner-feature-form{margin-top:12px}
+
+
+/* 2026 desktop customization studio: persistent local controls. */
+.zuzu-app .sidebar{width:var(--sidebar-width,265px);min-width:220px;max-width:380px}
+.zuzu-app .server-rail{width:var(--server-rail-width,70px)}
+.zuzu-app .server-circle{width:var(--server-size,49px);height:var(--server-size,49px);flex-shrink:0;
+  border-radius:calc(var(--ui-radius,12px) + 5px);font-size:calc(var(--server-size,49px) * .27)}
+.zuzu-app .server-circle:hover,.zuzu-app .server-circle.current{border-radius:var(--ui-radius,12px)}
+.zuzu-app .realm-logo,.zuzu-app .realm-bubble{border-radius:calc(var(--ui-radius,12px) + 5px)}
+.zuzu-app :is(.sidebar-search,.sidebar-nav-button,.channel-button,.dm-button,.friend-row,
+ .activity-box,.dialog,.composer,.chat-attachment>a,.toast,.settings-screen .settings-tile,
+ .settings-miniapp,.settings-appearance-layout,.settings-gradient-preset){border-radius:var(--ui-radius,12px)}
+.zuzu-app :is(.button,.settings-switch,.settings-action,.settings-theme-selector button,
+ .settings-swatch,.icon-button){border-radius:clamp(4px,calc(var(--ui-radius,12px) * .65),20px)}
+.zuzu-app .friend-row,.zuzu-app .chat-message{border-radius:clamp(4px,var(--ui-radius,12px),24px)}
+.zuzu-app .chat-message{transition:background .18s ease,box-shadow .18s ease}
+.zuzu-app.message-cards .chat-message{margin:4px 10px 7px 8px;padding:12px;
+  border:1px solid #ffffff14;background:color-mix(in srgb,var(--surface) 82%,#ffffff0b);
+  box-shadow:0 3px 10px #0000001f}
+.zuzu-app.message-cards .chat-message:hover{background:color-mix(in srgb,var(--surface) 72%,var(--accent) 12%);
+  border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
+.zuzu-app.has-gradient::before{opacity:calc((.10 + var(--glow-opacity,.65) * .45) * var(--glow-intensity,.7))}
+.zuzu-app.backdrop-grid::after,.zuzu-app.backdrop-dots::after{
+  content:"";position:absolute;inset:34px 0 0;z-index:0;pointer-events:none;
+  opacity:calc(.12 * var(--glow-intensity,.7))}
+.zuzu-app.backdrop-grid::after{
+  background-image:linear-gradient(#a6a0e343 1px,transparent 1px),
+    linear-gradient(90deg,#a6a0e343 1px,transparent 1px);background-size:28px 28px}
+.zuzu-app.backdrop-dots::after{
+  background-image:radial-gradient(circle,#d0a8fc 1px,transparent 1.3px);
+  background-size:20px 20px}
+.zuzu-app .server-circle.current::before{background:var(--accent);box-shadow:0 0 14px var(--accent)}
+.zuzu-app .realm-logo.selected{box-shadow:0 0 16px color-mix(in srgb,var(--accent) 45%,transparent)}
+.settings-appearance-layout .settings-action-row{flex-wrap:wrap}
+.settings-appearance-layout .settings-action-row button{flex:1 1 120px}
+.settings-appearance-fields .settings-range{gap:11px}
+.settings-gradient-preset{box-shadow:inset 0 -28px 30px #00000045;transition:transform .18s,border-color .18s}
+.settings-gradient-preset:hover{transform:translateY(-2px);border-color:var(--accent)}
+@media(prefers-reduced-motion:reduce){
+ .zuzu-app .chat-message,.settings-gradient-preset{transition:none!important}
+ .settings-gradient-preset:hover{transform:none}
+}
