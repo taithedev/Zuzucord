@@ -28,9 +28,12 @@ export const client = createClient(SUPABASE_URL, PUBLIC_KEY, {
 
 export type Server = { id: string; name: string; description: string; owner_id: string; accent_color:string; gradient_color:string };
 export type Channel = { id: string; name: string; description: string; server_id?: string };
+export type ChatAttachment = {
+  attachment_path: string; attachment_name: string; attachment_type: string; attachment_size: number
+};
 export type ChatMessage = {
   id: string; author_id: string; content: string; created_at: string; bot_name?: string | null; external_bot_id?: string | null
-};
+} & Partial<ChatAttachment>;
 export type FriendRequest = {
   id: string; from_user: string; to_user: string; status: 'pending' | 'accepted' | 'declined'
 };
@@ -40,7 +43,7 @@ export type CustomRoleAssignment = { user_id:string;role_id:string;server_id:str
 export type Profile = { user_id: string; display_name: string; status_text: string; avatar_url?: string | null };
 export type MessageDM = {
   id: string; sender_id: string; recipient_id: string; content: string; created_at: string
-};
+} & Partial<ChatAttachment>;
 export type Appearance = {
   theme: 'oled' | 'graphite' | 'midnight';
   accent: string;
@@ -162,23 +165,45 @@ export const appApi = {
   async getMessages(channelId: string, server: boolean): Promise<ChatMessage[]> {
     const table = server ? 'zuzucord_server_messages' : 'zuzucord_messages';
     const column = server ? 'channel_id' : 'room_id';
-    const fields = server ? 'id,author_id,content,created_at,bot_name,external_bot_id' : 'id,author_id,content,created_at';
+    const fields = server
+      ? 'id,author_id,content,created_at,bot_name,external_bot_id,attachment_path,attachment_name,attachment_type,attachment_size'
+      : 'id,author_id,content,created_at,attachment_path,attachment_name,attachment_type,attachment_size';
     const list = checked(await client.from(table).select(fields)
       .eq(column, channelId).order('created_at', { ascending: false }).limit(100));
     return (list || []).reverse() as unknown as ChatMessage[];
   },
-  async sendMessage(channelId: string, server: boolean, userId: string, content: string): Promise<void> {
-    const message = content.trim();
+  async sendMessage(channelId: string, server: boolean, userId: string, content: string,
+    attachment?: ChatAttachment): Promise<void> {
+    const message = content.trim() || (attachment ? '📎 ' + attachment.attachment_name : '');
     if (message.length < 1 || message.length > 2000) throw Error('Messages must be 1–2000 characters.');
-    if (server && message.startsWith('/')) {
+    if (server && !attachment && message.startsWith('/')) {
       checked(await client.rpc('zuzucord_run_bot_command', { p_channel: channelId, p_command: message }));
       return;
     }
     const table = server ? 'zuzucord_server_messages' : 'zuzucord_messages';
     checked(await client.from(table).insert(
-      server ? { channel_id: channelId, author_id: userId, content: message }
-             : { room_id: channelId, author_id: userId, content: message }
+      server ? { channel_id: channelId, author_id: userId, content: message, ...attachment }
+             : { room_id: channelId, author_id: userId, content: message, ...attachment }
     ));
+  },
+  async uploadChatAttachment(file: File, kind:'server'|'public'|'dm',
+    destinationId:string, senderId:string):Promise<ChatAttachment> {
+    const allowed = new Set(['image/png','image/jpeg','image/webp','image/gif',
+      'text/plain','application/pdf','audio/mpeg','audio/ogg','video/mp4']);
+    if (!allowed.has(file.type)) throw Error('Unsupported attachment type. Choose an image, PDF, text, MP3, OGG or MP4 file.');
+    if (!file.size || file.size > 10 * 1024 * 1024) throw Error('Attachments must be 10 MB or smaller.');
+    const name = file.name.replace(/[\\/\u0000-\u001f]/g,'').trim().slice(0,180);
+    if (!name) throw Error('Choose a named file.');
+    const extension = name.match(/\.[a-z0-9]{1,8}$/i)?.[0]?.toLowerCase() || '';
+    const attachment_path = kind+'/'+destinationId+'/'+senderId+'/'+crypto.randomUUID()+extension;
+    const bucket = client.storage.from('zuzucord-message-files');
+    const {error} = await bucket.upload(attachment_path,file,{contentType:file.type,upsert:false});
+    if (error) throw Error('Attachment upload failed: '+error.message);
+    return {attachment_path,attachment_name:name,attachment_type:file.type,attachment_size:file.size};
+  },
+  async discardChatAttachment(path:string):Promise<void> {
+    const {error}=await client.storage.from('zuzucord-message-files').remove([path]);
+    if(error)throw error;
   },
   createServer: async (name: string): Promise<string> =>
     checked(await client.rpc('zuzucord_create_server', { p_name: name.trim(), p_description: '' })),
@@ -241,14 +266,16 @@ export const appApi = {
   },
   getDMs: async (me: string, friend: string): Promise<MessageDM[]> => {
     const rows = checked(await client.from('zuzucord_direct_messages')
-      .select('id,sender_id,recipient_id,content,created_at')
+      .select('id,sender_id,recipient_id,content,created_at,attachment_path,attachment_name,attachment_type,attachment_size')
       .or(`and(sender_id.eq.${me},recipient_id.eq.${friend}),and(sender_id.eq.${friend},recipient_id.eq.${me})`)
       .order('created_at', { ascending: false }).limit(100));
     return (rows || []).reverse() as MessageDM[];
   },
-  sendDM: async (me: string, friend: string, message: string): Promise<void> => {
+  sendDM: async (me: string, friend: string, message: string, attachment?:ChatAttachment): Promise<void> => {
+    const content = message.trim() || (attachment ? '📎 ' + attachment.attachment_name : '');
+    if (content.length < 1 || content.length > 2000) throw Error('Messages must be 1–2000 characters.');
     checked(await client.from('zuzucord_direct_messages')
-      .insert({ sender_id: me, recipient_id: friend, content: message.trim() }));
+      .insert({ sender_id: me, recipient_id: friend, content, ...attachment }));
   },
   getProfile: async (userId: string): Promise<Profile | null> =>
     checked(await client.from('zuzucord_profiles')
