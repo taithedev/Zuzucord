@@ -2,7 +2,7 @@
   "name": "zuzucord-desktop",
   "productName": "ZuzuCord",
   "version": "0.11.0",
-  "description": "ZuzuCord React desktop client for Windows",
+  "description": "ZuzuCord cross-platform React community desktop client for Windows, macOS and Linux",
   "private": true,
   "main": "electron/main.cjs",
   "type": "module",
@@ -12,7 +12,9 @@
     "build:ui": "tsc --noEmit && vite build",
     "build:win": "npm run build:ui && node scripts/build-icon.cjs && electron-builder --win nsis zip --publish never",
     "preview": "vite preview",
-    "test": "node --test electron/versions.test.cjs electron/update-policy.test.cjs"
+    "test": "node --test electron/versions.test.cjs electron/update-policy.test.cjs",
+    "build:mac": "npm run build:ui && node scripts/build-platform-icons.cjs && electron-builder --mac dmg zip --x64 --arm64 --publish never",
+    "build:linux": "npm run build:ui && node scripts/build-platform-icons.cjs && electron-builder --linux AppImage deb --x64 --publish never"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
@@ -70,6 +72,30 @@
         "repo": "Zuzucord",
         "releaseType": "release"
       }
-    ]
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "ZuzuCord-Mac-${version}-${arch}.${ext}",
+      "icon": "assets/zuzucord.icns",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "notarize": false,
+      "category": "public.app-category.social-networking"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "artifactName": "ZuzuCord-Linux-${version}-${arch}.${ext}",
+      "icon": "assets/zuzucord.png",
+      "category": "Network",
+      "maintainer": "ZuzuCord Contributors",
+      "synopsis": "ZuzuCord community messaging and social desktop application"
+    }
   }
 }
