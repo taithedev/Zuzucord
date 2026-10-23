@@ -964,3 +964,38 @@ padding:10px;border-radius:8px;font-size:11px}
 .socials-profile-avatar{overflow:hidden}
 .socials-profile-bio{font-size:11px;color:#d3c6dc;background:#ffffff0a;border-radius:9px;
  line-height:1.8;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+
+
+/* 2026 conversation upgrade: Discord-inspired density, private file cards and @mentions. */
+.conversation-pane{background:linear-gradient(180deg,#170e20 0%,#140c1b 100%)}
+.conversation-scroll{scrollbar-width:thin;scrollbar-color:#654476 transparent}
+.chat-message{transition:background .14s ease;border-radius:7px;position:relative}
+.chat-message:hover{background:rgba(255,255,255,.045)}
+.message-meta strong{font-weight:740;letter-spacing:-.01em}
+.message-content{font-size:13px;line-height:1.58;color:#e5ddeb}
+.message-mention{padding:1px 4px;border-radius:4px;background:rgba(126,98,244,.25);color:#c9bbff;font-weight:700}
+.chat-attachment{margin-top:9px;max-width:min(480px,100%)}
+.chat-attachment>a{display:inline-flex;flex-direction:column;gap:6px;max-width:100%;border-radius:10px;border:1px solid #ffffff1a;
+  background:linear-gradient(145deg,#34203e,#201327);padding:9px;text-decoration:none;color:#eee6fa}
+.chat-attachment>a:hover{border-color:#9c70d5;background:#372344}
+.chat-attachment>a>img{object-fit:contain;max-width:100%;max-height:300px;border-radius:7px;background:#0b080d}
+.chat-attachment>a>span{display:flex;gap:9px;align-items:center}
+.chat-attachment>a>span>span{display:flex;flex-direction:column;gap:3px;max-width:360px;min-width:0}
+.chat-attachment strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-attachment small,.attachment-loading{color:#aea0b8;font-size:11px}
+.attachment-loading{display:flex;align-items:center;gap:7px}
+.composer-stack{position:relative;display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.composer-stack .composer{margin-top:0;min-height:53px;height:53px;background:#34213c}
+.composer-stack .composer:focus-within{outline:1px solid color-mix(in srgb,var(--accent),transparent 38%)}
+.composer .file-input-hidden{display:none}
+.composer-attachment{display:flex;align-items:center;gap:8px;background:#2d1c37;border:1px solid #63457a;
+  padding:8px 12px;border-radius:8px;font-size:12px;color:#ddd3e5}
+.composer-attachment strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.composer-attachment small{color:#b4a4c1;white-space:nowrap}
+.composer-attachment button{margin-left:auto;background:transparent;color:#d1c3dc;border:0;padding:4px;cursor:pointer}
+.mention-picker{position:absolute;bottom:calc(100% + 4px);left:0;right:0;max-height:232px;overflow:auto;
+ background:#25192d;border:1px solid #58406d;border-radius:10px;z-index:15;box-shadow:0 16px 36px #08020f99;padding:6px}
+.mention-picker button{background:transparent;display:flex;align-items:center;gap:9px;padding:6px 9px;
+ width:100%;border:0;border-radius:5px;color:#ebdff3;text-align:left;cursor:pointer}
+.mention-picker button:hover,.mention-picker button:focus-visible{background:#4b2e60;outline:none}
+@media(max-width:760px){.chat-attachment{max-width:100%}.composer-stack .composer{min-height:49px}}
