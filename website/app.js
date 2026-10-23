@@ -19,6 +19,25 @@
       /^ZuzuCord-React-\d+\.\d+\.\d+-x64\.exe$/i.test(asset.name) &&
       asset.browser_download_url?.startsWith('https://github.com/taithedev/Zuzucord/releases/download/')) || null;
   }
+  function updatePlatformDownloads(release) {
+    const assets = Array.isArray(release?.assets) ? release.assets : [];
+    const platforms = [
+      { id: 'download-win', expression: /^ZuzuCord-React-\d+\.\d+\.\d+-x64\.exe$/i, label: 'Download Windows installer ↗' },
+      { id: 'download-mac-intel', expression: /^ZuzuCord-Mac-\d+\.\d+\.\d+-x64\.dmg$/i, label: 'Download Intel DMG ↗' },
+      { id: 'download-mac-arm', expression: /^ZuzuCord-Mac-\d+\.\d+\.\d+-arm64\.dmg$/i, label: 'Download Apple Silicon DMG ↗' },
+      { id: 'download-linux-appimage', expression: /^ZuzuCord-Linux-\d+\.\d+\.\d+-(?:x64|x86_64)\.AppImage$/i, label: 'Download AppImage ↗' },
+      { id: 'download-linux-deb', expression: /^ZuzuCord-Linux-\d+\.\d+\.\d+-(?:x64|amd64)\.deb$/i, label: 'Download DEB ↗' }
+    ];
+    for (const platform of platforms) {
+      const element = $(platform.id);
+      if (!element) continue;
+      const asset = assets.find(a => platform.expression.test(a.name)
+        && a.browser_download_url?.startsWith('https://github.com/taithedev/Zuzucord/releases/download/'));
+      element.href = asset ? asset.browser_download_url : release?.html_url || RELEASES;
+      element.textContent = asset ? platform.label : 'View available builds ↗';
+      element.dataset.available = String(Boolean(asset));
+    }
+  }
   async function load() {
     const refresh = $('refresh-stats');
     refresh.disabled = true;
@@ -33,6 +52,7 @@
       set('stat-releases', format(published.length));
       const latest = published.find(item => downloadableAsset(item)) || published[0];
       const asset = downloadableAsset(latest);
+      updatePlatformDownloads(latest);
       if (latest) set('release-label', 'Latest: ' + latest.tag_name + (latest.prerelease ? ' · preview' : ''));
       const link = $('release-download');
       const primary = $('main-download');

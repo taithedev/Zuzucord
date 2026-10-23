@@ -109,7 +109,8 @@ function makeWindow() {
     width: 1450, height: 910, minWidth: 950, minHeight: 620,
     backgroundColor: '#09050f', show: false, autoHideMenuBar: true,
     title: 'ZuzuCord', frame: false,
-    icon: path.join(__dirname, '../assets/zuzucord.ico'),
+    icon: path.join(__dirname, process.platform==='win32' || !fs.existsSync(path.join(__dirname,'../assets/zuzucord.png'))
+      ? '../assets/zuzucord.ico' : '../assets/zuzucord.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false, contextIsolation: true,

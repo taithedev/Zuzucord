@@ -182,11 +182,6 @@ function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState(()=>{
-    try{return localStorage.getItem('zuzucord_notice_accepted_v1')!=='yes';}
-    catch{return true;}
-  });
-  const [acknowledge, setAcknowledge] = useState(false);
   const [appearance, setAppearance] = useState<Appearance>(getLocalAppearance);
   const [modal, setModal] = useState<ModalName>(null);
   const [view, setView] = useState<View>('friends');
@@ -290,11 +285,11 @@ function App() {
   },[friends,clientPreferences.desktopFriendAlerts]);
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key.toLowerCase() === 'k') {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         quickSearch.current?.focus();
       }
-      if (event.ctrlKey && event.key === ',') {
+      if ((event.ctrlKey || event.metaKey) && event.key === ',') {
         event.preventDefault();
         setModal('settings');
       }
@@ -600,9 +595,9 @@ function App() {
   const saveAppearance = async (next: Appearance) => {
     setAppearance(next);
     if (me && next.sync_enabled) {
-      try { await appApi.saveBeta(me, next, selectedServer); setStatus('Appearance saved to your ZuzuCord website and Windows app.'); }
+      try { await appApi.saveBeta(me, next, selectedServer); setStatus('Appearance saved to your ZuzuCord account and desktop app.'); }
       catch (error) { showError(error); }
-    } else setStatus('Appearance saved on this Windows device.');
+    } else setStatus('Appearance saved on this device.');
   };
 
   const action = async () => {
@@ -659,6 +654,11 @@ function App() {
     '--glow-position': appearance.glow_position+'%',
     '--blur-strength': Math.round(appearance.glass_strength / 8) + 'px',
     '--glow-opacity': String(appearance.glass_strength / 100),
+    '--glow-intensity': String(clientPreferences.glowIntensity/100),
+    '--ui-radius': clientPreferences.cornerRadius+'px',
+    '--sidebar-width': clientPreferences.sidebarWidth+'px',
+    '--server-size': Math.round(49*clientPreferences.serverIconScale/100)+'px',
+    '--server-rail-width': Math.round(70*clientPreferences.serverIconScale/100)+'px',
   } as CSSProperties;
   const displayedFriends = useMemo(() => friends.filter(friend => {
     if (tab === 'pending' && friend.status !== 'pending') return false;
@@ -688,7 +688,9 @@ function App() {
     + (appearance.motion_enabled ? ' has-motion' : ' no-motion')
     + (appearance.compact ? ' compact' : '')
     + (clientPreferences.highContrast ? ' high-contrast' : '')
-    + (clientPreferences.messageSpacing === 'compact' ? ' message-compact' : '')} style={themeStyle}>
+    + (clientPreferences.messageSpacing === 'compact' ? ' message-compact' : '')
+    + (clientPreferences.messageStyle === 'cards' ? ' message-cards' : '')
+    + ' backdrop-' + clientPreferences.backgroundPattern} style={themeStyle}>
     <header className="titlebar">
       <div className="title-nav"><Sparkles size={15} /> <strong>ZuzuCord</strong> <span>V3 • React Desktop</span></div>
       <span className="window-drag" />
@@ -707,18 +709,7 @@ function App() {
         <IconButton label="Close" className="close-window" onClick={() => void window.zuzuDesktop?.windowAction('close')}><X size={15} /></IconButton>
       </div>
     </header>
-    {notice ? <div className="notice-overlay">
-      <div className="notice-card">
-        <div className="notice-icon"><ShieldCheck size={26} /></div>
-        <h2>Welcome to ZuzuCord</h2>
-        <p>ZuzuCord is an independent social client, not affiliated with Discord. Accounts may be restricted for breaking community rules. The developers cannot guarantee that misuse won't result in restrictions. Your legal rights are not waived by this notice.</p>
-        <label className="check-line"><input type="checkbox" checked={acknowledge} onChange={e => setAcknowledge(e.target.checked)} /> I understand and agree to follow the community guidelines.</label>
-        <button className="button button-primary full" disabled={!acknowledge} onClick={() => {
-          try{localStorage.setItem('zuzucord_notice_accepted_v1','yes');}catch{/* storage unavailable */}
-          setNotice(false);
-        }}>Continue to ZuzuCord <ChevronRight size={16} /></button>
-      </div>
-    </div> : !session ? <Auth onSuccess={async next => {
+    {!session ? <Auth onSuccess={async next => {
       setSession(next);
       try { setUsername(await ensureAccount(next)); }
       catch (error) { showError(error); }

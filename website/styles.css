@@ -171,3 +171,22 @@ box-shadow:0 15px 28px #06020c65,0 0 0 1px #a37ddd12}
 #community .stat,#stats .stat{border-color:#5a42583a}
 #community .stat:hover,#stats .stat:hover{border-color:#9a72c274}
 @media(prefers-reduced-motion:reduce){.feature-grid .feature,.button{transition:none!important;transform:none!important}}
+
+
+/* Download platform switcher — links are upgraded only for verified GitHub release assets. */
+.platform-downloads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0 5px}
+.platform-downloads article{padding:25px 23px 22px;background:linear-gradient(135deg,#201329,#141018 65%,#111013);
+ border:1px solid #72538055;border-radius:16px;display:flex;flex-direction:column;align-items:flex-start;gap:11px;
+ transition:border-color .2s,transform .2s,box-shadow .2s}
+.platform-downloads article:hover{border-color:#a67dc4;transform:translateY(-3px);box-shadow:0 16px 35px #0006}
+.platform-downloads article>span{letter-spacing:1.8px;font-size:10px;font-weight:800;color:#b8a1d4}
+.platform-downloads article strong{color:#f4eafc;font-size:20px;line-height:1.2;letter-spacing:-.5px}
+.platform-downloads article p{font-size:12px;color:#a99daf;line-height:1.7;margin:0 0 8px;min-height:44px}
+.platform-downloads article a{display:inline-flex;align-items:center;min-height:34px;gap:5px;padding:7px 11px;
+  border:1px solid #7c58a655;border-radius:7px;color:#cfb5ef;background:#271838;
+  font-weight:700;font-size:12px;transition:background .16s,border-color .16s}
+.platform-downloads article a:hover{background:#553274;border-color:#ba93e5}
+.platform-downloads article a[data-available="false"]{background:#17131d;color:#aaa0b0}
+@media(max-width:820px){.platform-downloads{grid-template-columns:1fr 1fr}}
+@media(max-width:550px){.platform-downloads{grid-template-columns:1fr}.platform-downloads article p{min-height:0}}
+@media(prefers-reduced-motion:reduce){.platform-downloads article{transition:none}.platform-downloads article:hover{transform:none}}

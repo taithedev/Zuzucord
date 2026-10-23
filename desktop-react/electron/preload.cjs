@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('zuzuDesktop', Object.freeze({
+  platform: process.platform,
   secureGet: key => ipcRenderer.invoke('secret:get', key),
   secureSet: (key, value) => ipcRenderer.invoke('secret:set', key, value),
   secureRemove: key => ipcRenderer.invoke('secret:remove', key),
