@@ -23,12 +23,14 @@ import { DeveloperWorkspace } from './DeveloperWorkspace';
 import { SocialsHub } from './SocialsHub';
 import { ContextMenu, type MenuDetails } from './ContextMenu';
 import { readClientPreferences, saveClientPreferences, type ClientPreferences } from './clientPreferences';
+import { watchTables } from './live';
+import { ServerSettings } from './ServerSettings';
 import './styles.css';
 
 type View = 'friends' | 'channel' | 'dm' | 'socials';
 type FriendTab = 'all' | 'pending' | 'online';
 type ModalName = 'settings' | 'new-server' | 'join-server' | 'new-channel' | 'add-friend'
-  | 'members' | 'invite' | 'profile' | 'bot' | 'announcements' | 'boost' | 'install-bot' | 'roles' | 'owner-tools' | 'developer' | null;
+  | 'server-settings' | 'members' | 'invite' | 'profile' | 'bot' | 'announcements' | 'boost' | 'install-bot' | 'roles' | 'owner-tools' | 'developer' | null;
 type Friend = { id: string; username: string; status: FriendRequest['status']; outgoing: boolean; requestId: string };
 const dateTime = (value: string) => new Date(value).toLocaleString(undefined, {
   month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
@@ -187,6 +189,8 @@ function App() {
   const [view, setView] = useState<View>('friends');
   const [tab, setTab] = useState<FriendTab>('all');
   const [query, setQuery] = useState('');
+  const [liveConnected,setLiveConnected]=useState(false);
+  const [collapsedCategories,setCollapsedCategories]=useState<string[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState<string | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -322,6 +326,8 @@ function App() {
     }
   };
 
+  useEffect(()=>{if(!me)return;return watchTables('announcements:'+me,['zuzucord_official_announcements'],()=>{void appApi.announcements().then(setAnnouncements).catch(showError);});},[me]);
+
   const loadServers = useCallback(async () => {
     try { setServers(await appApi.getServers()); }
     catch (error) { showError(error); }
@@ -353,8 +359,8 @@ function App() {
         } else setProfileAvatar(null);
       }
     }).catch(showError);
-    const poll = window.setInterval(() => { void loadServers(); void loadFriends(); }, 24000);
-    return () => { live = false; window.clearInterval(poll); };
+    const stop=watchTables('shell:'+me,['zuzucord_servers','zuzucord_server_members','zuzucord_friend_requests'],()=>{void loadServers();void loadFriends();});
+    return () => { live = false; stop(); };
   }, [me, loadFriends, loadServers]);
 
   useEffect(() => {
@@ -370,7 +376,8 @@ function App() {
     };
     void refreshPresence();
     const timer = window.setInterval(refreshPresence, 45000);
-    return () => { active = false; window.clearInterval(timer); };
+    const stop=watchTables('friends-presence:'+me,['zuzucord_friend_presence'],()=>{void refreshPresence();});
+    return () => { active = false; window.clearInterval(timer);stop(); };
   }, [me, friends]);
 
   useEffect(() => {
@@ -403,7 +410,8 @@ function App() {
 
   useEffect(() => {
     if (!me || !appearance.sync_enabled) return;
-    const poll = window.setInterval(async () => {
+    const stop=watchTables('theme:'+me,['zuzucord_user_sync'],()=>void refresh());
+    async function refresh() {
       try {
         const remote = await appApi.getBeta(me);
         if (!remote?.sync_enabled) return;
@@ -413,8 +421,8 @@ function App() {
           return JSON.stringify(merged) === JSON.stringify(current) ? current : merged;
         });
       } catch { /* Still usable offline if beta sync is temporarily unavailable. */ }
-    }, 60000);
-    return () => window.clearInterval(poll);
+    }
+    return stop;
   }, [me, appearance.sync_enabled]);
 
   useEffect(() => {
@@ -451,8 +459,8 @@ function App() {
         if(alive)setServerPermissions({manage_channels:false,manage_members:false,manage_bots:false});
       }
     };
-    void load();
-    return ()=>{alive=false;};
+    const stop=watchTables('permissions:'+me+':'+selectedServer,['zuzucord_server_members','zuzucord_server_roles','zuzucord_member_custom_roles'],()=>void load());
+    return ()=>{alive=false;stop();};
   },[selectedServer,me,modal]);
 
   useEffect(() => {
@@ -467,21 +475,46 @@ function App() {
     return ()=>{active=false;};
   },[selectedServer,me,modal]);
 
+  useEffect(()=>{
+    if(!me)return;
+    let active=true;
+    const refresh=async()=>{
+      try{
+        const list=await appApi.getChannels(selectedServer||undefined);
+        if(!active)return;
+        setChannels(list);setSelectedChannel(id=>list.some(c=>c.id===id)?id:list[0]?.id||null);
+        if(selectedServer){
+          const [users,roles,assignments]=await Promise.all([appApi.members(selectedServer),appApi.getCustomRoles(selectedServer),appApi.getRoleAssignments(selectedServer)]);
+          if(active){setMembers(users);setServerCustomRoles(roles);setServerRoleAssignments(assignments);}
+        }
+        const roles=await appApi.myRoles(me);if(active)setUserRoles(roles);
+      }catch(error){if(active)showError(error);}
+    };
+    const stop=watchTables('community:'+me+':'+selectedServer,
+      ['zuzucord_server_channels','zuzucord_rooms','zuzucord_server_members','zuzucord_server_roles','zuzucord_member_custom_roles','zuzucord_user_roles'],()=>void refresh());
+    return ()=>{active=false;stop();};
+  },[me,selectedServer]);
+
+  const messageRequest=useRef(0),dmRequest=useRef(0);
   const loadMessages = useCallback(async () => {
     if (!selectedChannel || view !== 'channel') return;
-    try { setMessages(await appApi.getMessages(selectedChannel, !!selectedServer)); }
+    const request=++messageRequest.current;
+    try { const rows=await appApi.getMessages(selectedChannel, !!selectedServer);if(request===messageRequest.current)setMessages(rows); }
     catch (error) { showError(error); }
   }, [selectedChannel, selectedServer, view]);
   const loadDMs = useCallback(async () => {
     if (!me || !selectedFriend || view !== 'dm') return;
-    try { setDirectMessages(await appApi.getDMs(me, selectedFriend)); }
+    const request=++dmRequest.current;
+    try { const rows=await appApi.getDMs(me, selectedFriend);if(request===dmRequest.current)setDirectMessages(rows); }
     catch (error) { showError(error); }
   }, [selectedFriend, me, view]);
 
   useEffect(() => {
     if (!session) return;
-    if (view === 'channel') { void loadMessages(); const timer = window.setInterval(loadMessages, 7000); return () => window.clearInterval(timer); }
-    if (view === 'dm') { void loadDMs(); const timer = window.setInterval(loadDMs, 7000); return () => window.clearInterval(timer); }
+    if (view === 'channel') { const stop=watchTables('messages:'+me+':'+selectedChannel,
+      [selectedServer?'zuzucord_server_messages':'zuzucord_messages'],()=>void loadMessages(),setLiveConnected);return ()=>{messageRequest.current++;stop();};}
+    if (view === 'dm') {const stop=watchTables('dm:'+me+':'+selectedFriend,
+      ['zuzucord_direct_messages'],()=>void loadDMs(),setLiveConnected);return ()=>{dmRequest.current++;stop();};}
   }, [session, view, loadMessages, loadDMs]);
   useEffect(() => { messagesBottom.current?.scrollIntoView({ behavior: 'instant', block: 'end' }); },
     [view, selectedChannel, selectedFriend, messages.length, directMessages.length]);
@@ -644,6 +677,10 @@ function App() {
   };
 
   const themeStyle = {
+    '--activity-width':clientPreferences.activityWidth+'px',
+    '--friend-row-height':clientPreferences.rowHeight+'px',
+    '--avatar-radius':clientPreferences.avatarShape==='circle'?'50%':'25%',
+    '--theme-saturation':clientPreferences.saturation+'%',
     '--user-font-scale':String(clientPreferences.fontScale/100),
     '--accent': appearance.accent,
     '--gradient-a': appearance.gradient_start,
@@ -690,6 +727,7 @@ function App() {
     + (clientPreferences.highContrast ? ' high-contrast' : '')
     + (clientPreferences.messageSpacing === 'compact' ? ' message-compact' : '')
     + (clientPreferences.messageStyle === 'cards' ? ' message-cards' : '')
+    + ' layout-'+clientPreferences.layout
     + ' backdrop-' + clientPreferences.backgroundPattern} style={themeStyle}>
     <header className="titlebar">
       <div className="title-nav"><Sparkles size={15} /> <strong>ZuzuCord</strong> <span>V3 • React Desktop</span></div>
@@ -717,7 +755,7 @@ function App() {
       <main className="workspace">
         <nav className="realm-rail" aria-label="Main navigation">
           <button title="Friends" className={'realm-logo ' + (view === 'friends' ? 'selected' : '')}
-            onClick={() => { setView('friends'); setSelectedFriend(null); }}>
+            onClick={() => { setView('friends'); setSelectedFriend(null);setSelectedServer(null); }}>
             <Sparkles size={24} /></button>
           <button title="Socials · posts, Moments and creators"
             className={'realm-bubble socials-rail '+(view === 'socials' ? 'selected' : '')}
@@ -753,22 +791,26 @@ function App() {
               }},
               {id:'copy-id',label:'Copy server ID',icon:<Hash size={16}/>,
                 onClick:()=>copyItem(server.id,'Server ID'),dividerBefore:true},
+              {id:'settings',label:'Server settings',icon:<Settings2 size={16}/>,disabled:server.owner_id!==me,onClick:()=>{serverSelect(server.id);openModal('server-settings');}},
               {id:'roles',label:'Manage roles',icon:<Shield size={16}/>,disabled:server.owner_id!==me,
                 onClick:()=>{serverSelect(server.id);openModal('roles');}},
               {id:'boost',label:'Server boosts',icon:<Gem size={16}/>,
                 onClick:()=>{serverSelect(server.id);openModal('boost');}}
             ]})}
             style={{ '--bubble-color': server.accent_color || colors[index % colors.length] } as CSSProperties}>
-            {initials(server.name)}
+            {server.icon_url?<img src={server.icon_url} alt={server.name} className="server-icon-image"/>:initials(server.name)}
           </button>)}
           <IconButton label="Create another server" onClick={() => openModal('new-server')}><Plus size={19} /></IconButton>
         </nav>
         <section className="sidebar">
+          {selectedServer&&view==='channel'&&<button className="community-heading" style={{background:`linear-gradient(120deg,${currentServer?.accent_color||'#24202a'}30,${currentServer?.gradient_color||'#15111b'}60)`}} onClick={()=>openModal(isOwner?'server-settings':'invite')}>
+            {currentServer?.icon_url&&<img src={currentServer.icon_url} alt=""/>}<strong>{currentServer?.name}</strong><ChevronDown size={18}/>
+          </button>}
           <label className="sidebar-search"><Search size={16} /><input ref={quickSearch}
             placeholder="Find a friend or channel" aria-label="Search friends and channels"
             value={query} onChange={e => setQuery(e.target.value)} /><kbd>Ctrl K</kbd></label>
           <button className={'sidebar-nav-button ' + (view === 'friends' ? 'selected' : '')}
-            onClick={() => { setView('friends'); setSelectedFriend(null); }}><Users size={19} /> Friends {pendingCount > 0 && <b className="count-chip">{pendingCount}</b>}</button>
+            onClick={() => { setView('friends'); setSelectedFriend(null);setSelectedServer(null); }}><Users size={19} /> Friends {pendingCount > 0 && <b className="count-chip">{pendingCount}</b>}</button>
           <button className="sidebar-nav-button" onClick={() => openModal('add-friend')}><UserPlus size={19} /> Add Friend</button>
           <button className={'sidebar-nav-button '+(view==='socials'?'selected':'')}
             onClick={()=>{setView('socials');setSelectedFriend(null);setSelectedServer(null);}}>
@@ -781,7 +823,10 @@ function App() {
             <IconButton label={selectedServer ? 'Create channel' : 'Add friend'}
               onClick={() => openModal(selectedServer ? 'new-channel' : 'add-friend')}><Plus size={15} /></IconButton></div>
           {view === 'channel' || (selectedServer && view!=='socials') ? <div className="channel-nav">
-            {channels.filter(c => !query || c.name.toLowerCase().includes(query.toLowerCase())).map(ch => <button
+            {Array.from(new Set(channels.map(c=>c.category||'Text channels'))).map(category=><React.Fragment key={category}>
+            <button className="channel-category" aria-expanded={!collapsedCategories.includes(category)} onClick={()=>setCollapsedCategories(prev=>prev.includes(category)?prev.filter(c=>c!==category):[...prev,category])}>
+              <ChevronDown size={13} style={{transform:collapsedCategories.includes(category)?'rotate(-90deg)':undefined}}/>{category}</button>
+            {channels.filter(c => (c.category||'Text channels')===category && (!collapsedCategories.includes(category)||!!query) && (!query || c.name.toLowerCase().includes(query.toLowerCase()))).map(ch => <button
               key={ch.id} className={'channel-button ' + (selectedChannel === ch.id && view === 'channel' ? 'selected' : '')}
               onContextMenu={event=>openContext(event,{title:'# '+ch.name,actions:[
                 {id:'open',label:'Open channel',icon:<Hash size={16}/>,onClick:()=>{
@@ -793,7 +838,7 @@ function App() {
                   onClick:()=>copyItem(ch.id,'Channel ID'),dividerBefore:true}
               ]})}
               onClick={() => { setSelectedChannel(ch.id); setView('channel'); setSelectedFriend(null); }}>
-              <Hash size={17} /><span>{ch.name}</span></button>)}
+              <Hash size={17} /><span>{ch.name}</span></button>)}</React.Fragment>)}
             {channels.length === 0 && <div className="sidebar-empty">No channels yet.</div>}
           </div> : <div className="dm-nav">
             {friends.filter(f => f.status === 'accepted').map(friend => <button
@@ -863,6 +908,7 @@ function App() {
                 view === 'channel' ? currentChannel?.description || 'Community conversation' : 'Private conversation'}
             </span>}
             <div className="toolbar-right">
+              {(view==='channel'||view==='dm')&&<span className={'live-indicator '+(liveConnected?'connected':'')} role="status">{liveConnected?'Live':'Reconnecting…'}</span>}
               <IconButton label="Refresh" onClick={() => view === 'friends' ? void loadFriends() : view === 'channel'
                 ? void loadMessages() : view==='dm'? void loadDMs() : setStatus('Refresh Socials from its feed.')}><RefreshCw size={19} /></IconButton>
               <IconButton label={rightPanel ? 'Hide activity panel' : 'Show activity panel'}
@@ -973,7 +1019,7 @@ function App() {
           {view === 'friends' ? <>
             <div className="activity-box"><h3><ServerIcon size={17}/> Your servers <span>{servers.length}</span></h3>
               {servers.slice(0, 7).map(server => <button className="activity-server" key={server.id}
-                onClick={() => serverSelect(server.id)}><Avatar name={server.name} size="tiny"/><span>{server.name}</span><ChevronRight size={16}/></button>)}
+                onClick={() => serverSelect(server.id)}><Avatar name={server.name} size="tiny" src={server.icon_url}/><span>{server.name}</span><ChevronRight size={16}/></button>)}
               {servers.length === 0 && <p className="muted tiny">No servers joined. Create or join one to start.</p>}
             </div>
             <div className="activity-box"><h3><Heart size={17}/> Connections</h3>
@@ -1005,6 +1051,7 @@ function App() {
               {serverPermissions.manage_bots && <button className="plain-activity-link" onClick={() => openModal('bot')}>Bot settings <ChevronRight size={14}/></button>}
               <button className="plain-activity-link" onClick={() => openModal('invite')}>Invite to server <ChevronRight size={14}/></button>
               {canCreateChannel && <button className="plain-activity-link" onClick={() => openModal('new-channel')}>Create text channel <ChevronRight size={14}/></button>}
+              {isOwner && <button className="plain-activity-link" onClick={()=>openModal('server-settings')}><Settings2 size={14}/> Server settings <ChevronRight size={14}/></button>}
               {isOwner && <button className="plain-activity-link" onClick={()=>openModal('roles')}>
                 <Shield size={14}/> Manage server roles <ChevronRight size={14}/></button>}
               {isOwner && <button className="plain-activity-link" onClick={() => openModal('install-bot')}>Manage community bots <ChevronRight size={14}/></button>}
@@ -1076,7 +1123,7 @@ function App() {
         invite:'Invite people',profile:'Your profile',bot:'ZuzuBot settings',
         announcements:'ZuzuCord Official',boost:'Crystals & Server Perks', 'install-bot':'Server bot applications',
         developer:'Developer Portal',
-        roles:'Server roles & permissions','owner-tools':'ZuzuCord Owner tools'
+        'server-settings':'Server settings',roles:'Server roles & permissions','owner-tools':'ZuzuCord Owner tools'
       }[modal]}
         onClose={() => setModal(null)} wide={modal === 'roles'}>
         {modal === 'announcements' ? <div className="modal-body official-inbox">
@@ -1099,6 +1146,7 @@ function App() {
                 <button className="button button-subtle" onClick={()=>void installSelectedBot(bot.id)}>Install</button>}
             </div>)}
         </div>
+        : modal === 'server-settings' && currentServer && isOwner ? <ServerSettings server={currentServer} channels={channels} onSaved={loadServers}/>
         : modal === 'roles' && selectedServer ? <ServerRolesEditor
             serverId={selectedServer} members={members} isOwner={isOwner} />
         : modal === 'owner-tools' && userRoles.includes('owner') ? <OwnerConsole />

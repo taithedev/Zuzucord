@@ -30,3 +30,13 @@ Tests: `node --test electron/versions.test.cjs electron/update-policy.test.cjs`.
 Main-branch releases now install the generated NSIS EXE on the Windows runner, launch the installed executable, verify the real React sign-in screen and preload version IPC, reinstall and launch again, then uninstall. A dedicated test profile keeps accounts isolated. The pipeline also checks the live Supabase Auth endpoint, public stats RPC, and that anonymous requests cannot read private messages or role grants. A failed check prevents publication. Releases are pinned to the tested commit. These checks do not cover authenticated chat, voice calls, or a two-version automatic update round trip.
 
 Dependencies are pinned with a committed npm lockfile and Windows uses `npm ci`. Opening ZuzuCord again focuses the existing window; update-feed requests time out after 15 seconds instead of leaving the checker waiting indefinitely.
+
+## Discord-style live community workspace
+
+- Discord-style and Studio workspace layouts; avatar shapes, activity-panel width, friend row height and background saturation, with persistent local settings and theme JSON import/export.
+- Owner account directory with username search, pagination, join dates, platform roles and quick selection for role management. The directory RPC rejects non-owners and never returns passwords or authentication tokens.
+- Server owners can upload cropped 128px icons, edit names/descriptions and change branding colors. Channel settings support names, topics, categories and ordering. Categories collapse in the sidebar.
+- Database-change subscriptions refresh messages, DMs, friends, presence, servers, channels, membership, roles, announcements, synced theme colors, social activity and open comment threads. Reconnects refetch current data; 30-second recovery polling remains available during connection trouble.
+- Supabase migrations enable the required publication sources while preserving existing membership/message RLS. Server and channel changes are authorized inside the database.
+
+Validation: production TypeScript/Vite build, updater tests, realtime lifecycle tests, and rolled-back database checks for authorized owner operations and unauthorized access denial. Existing installed clients need the newly built desktop release for the UI and subscription code.

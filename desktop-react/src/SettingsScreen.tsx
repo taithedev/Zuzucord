@@ -221,6 +221,11 @@ export function SettingsScreen(props:Props) {
           typeof imported[key]==='number' && Number.isFinite(imported[key] as number)
             ?Math.max(low,Math.min(high,imported[key] as number)):fallback;
         onPreferences({...preferences,
+          layout:imported.layout==='studio'?'studio':'discord',
+          avatarShape:imported.avatarShape==='rounded'?'rounded':'circle',
+          activityWidth:numberIn('activityWidth',220,400,preferences.activityWidth),
+          rowHeight:numberIn('rowHeight',48,84,preferences.rowHeight),
+          saturation:numberIn('saturation',0,150,preferences.saturation),
           fontScale:numberIn('fontScale',85,125,preferences.fontScale),
           messageSpacing:imported.messageSpacing==='compact'?'compact':'comfortable',
           messageStyle:imported.messageStyle==='cards'?'cards':'classic',
@@ -414,6 +419,18 @@ export function SettingsScreen(props:Props) {
               <input type="range" min={0} max={100} value={draftTheme.glass_strength}
                 onChange={e=>change('glass_strength',Number(e.target.value))}/></label>
             <div className="settings-subsection-heading"><strong>Workspace studio</strong><small>Applied immediately and stored on this device</small></div>
+            <label className="settings-input-label">Workspace layout</label>
+            <div className="settings-theme-selector">{(['discord','studio'] as const).map(layout=><button type="button" key={layout}
+              className={preferences.layout===layout?'selected':''} onClick={()=>onPreferences({...preferences,layout})}>{layout==='discord'?'Discord style':'Studio'}</button>)}</div>
+            <label className="settings-input-label">Avatar shape</label>
+            <div className="settings-theme-selector">{(['circle','rounded'] as const).map(avatarShape=><button type="button" key={avatarShape}
+              className={preferences.avatarShape===avatarShape?'selected':''} onClick={()=>onPreferences({...preferences,avatarShape})}>{avatarShape}</button>)}</div>
+            <label className="settings-range">Activity panel width <span>{preferences.activityWidth}px</span><input type="range" min="220" max="400" step="10" value={preferences.activityWidth}
+              onChange={e=>onPreferences({...preferences,activityWidth:Number(e.target.value)})}/></label>
+            <label className="settings-range">Friend row height <span>{preferences.rowHeight}px</span><input type="range" min="48" max="84" step="2" value={preferences.rowHeight}
+              onChange={e=>onPreferences({...preferences,rowHeight:Number(e.target.value)})}/></label>
+            <label className="settings-range">Background saturation <span>{preferences.saturation}%</span><input type="range" min="0" max="150" step="5" value={preferences.saturation}
+              onChange={e=>onPreferences({...preferences,saturation:Number(e.target.value)})}/></label>
             <label className="settings-range">Sidebar width <span>{preferences.sidebarWidth}px</span>
               <input type="range" min="220" max="380" step="5" value={preferences.sidebarWidth}
                 onChange={e=>onPreferences({...preferences,sidebarWidth:Number(e.target.value)})}/></label>

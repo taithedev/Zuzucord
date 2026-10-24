@@ -1,3 +1,4 @@
+import { watchTables } from './live';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bookmark, Camera, Check, ChevronDown, Clock3, Compass, Copy, Film, Heart,
   Image as ImageIcon, MessageCircle, MoreHorizontal, Repeat2, RefreshCw, Send, Sparkles, Trash2,
@@ -127,9 +128,9 @@ export function SocialsHub({userId,owner,onMessage,onAccountSettings}:{
     finally{if(mounted.current)setLoading(false);}
   },[userId,owner]);
   useEffect(()=>{
-    mounted.current=true;void load();
-    const interval=window.setInterval(()=>{void load();},60000);
-    return ()=>{mounted.current=false;window.clearInterval(interval);}
+    mounted.current=true;
+    const stop=watchTables('socials:'+userId,['zuzucord_social_posts','zuzucord_social_likes','zuzucord_social_reposts','zuzucord_social_follows','zuzucord_social_bookmarks','zuzucord_social_hidden_creators'],()=>void load());
+    return ()=>{mounted.current=false;stop();}
   },[load]);
   useEffect(()=>{
     if(!file){setPreview(null);return;}
@@ -266,6 +267,20 @@ export function SocialsHub({userId,owner,onMessage,onAccountSettings}:{
       setFollowing(old=>{const next=new Set(old);if(yes)next.delete(target);else next.add(target);return next;});
     }catch(e){setError(getErr(e));}
   };
+  useEffect(()=>{
+    if(!expanded.size)return;
+    let active=true;
+    const refresh=async()=>{
+      try{await Promise.all([...expanded].map(async postId=>{
+        const {data,error}=await client.from('zuzucord_social_comments').select('id,post_id,author_id,content,created_at')
+          .eq('post_id',postId).order('created_at',{ascending:true}).limit(100);
+        if(error)throw error;
+        if(active)setComments(old=>({...old,[postId]:(data||[]) as Comment[]}));
+      }));}catch(error){if(active)setError(getErr(error));}
+    };
+    const stop=watchTables('social-comments:'+userId,['zuzucord_social_comments'],()=>void refresh());
+    return ()=>{active=false;stop();};
+  },[expanded,userId]);
   const openComments=async(postId:string)=>{
     if(expanded.has(postId)){
       setExpanded(old=>{const n=new Set(old);n.delete(postId);return n;});return;

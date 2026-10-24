@@ -1056,3 +1056,46 @@ padding:10px;border-radius:8px;font-size:11px}
  .zuzu-app .chat-message,.settings-gradient-preset{transition:none!important}
  .settings-gradient-preset:hover{transform:none}
 }
+/* Discord-inspired community workspace; all layout controls remain reversible. */
+.zuzu-app .activity-panel{width:var(--activity-width,288px)}
+.zuzu-app .friend-row{min-height:var(--friend-row-height,62px)}
+.zuzu-app .avatar{border-radius:var(--avatar-radius,50%)}
+.zuzu-app::before{filter:saturate(var(--theme-saturation,100%))}
+.zuzu-app .server-circle{position:relative;overflow:visible;transition:border-radius .18s,background .18s}
+.server-icon-image{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.zuzu-app .server-circle.current:before{content:"";position:absolute;left:-10px;top:25%;height:50%;width:4px;background:var(--text);border-radius:0 4px 4px 0}
+.zuzu-app.layout-discord .realm-rail{width:58px;gap:8px;padding:10px 5px}
+.zuzu-app.layout-discord .server-rail{gap:9px;background:var(--surface-deep)}
+.zuzu-app.layout-discord .server-rail-title{display:none}
+.zuzu-app.layout-discord .server-circle{border-radius:50%;box-shadow:none}
+.zuzu-app.layout-discord .server-circle:hover,.zuzu-app.layout-discord .server-circle.current{border-radius:30%}
+.zuzu-app.layout-discord .sidebar{padding-top:0;background:color-mix(in srgb,var(--surface) 95%,var(--gradient-a))}
+.zuzu-app.layout-discord .sidebar-nav-button{border-radius:7px;min-height:40px}
+.zuzu-app.layout-discord .friend-row{border-radius:0;border-bottom:1px solid var(--line)}
+.zuzu-app.layout-discord .friend-row:hover{border-radius:8px}
+.zuzu-app.layout-discord .activity-box{border-radius:10px;box-shadow:none;border:1px solid var(--line)}
+.community-heading{border:0;border-bottom:1px solid var(--line);background:transparent;color:inherit;min-height:52px;display:flex;align-items:center;gap:10px;width:100%;padding:12px;text-align:left}
+.community-heading strong{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.community-heading img{width:28px;height:28px;border-radius:8px;object-fit:cover}
+.channel-category{display:flex;align-items:center;gap:5px;width:100%;border:0;background:none;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;padding:18px 4px 7px;letter-spacing:.4px;text-align:left}
+.channel-category:hover{color:var(--text)}
+.live-indicator{font-size:11px;color:#e8b46b;white-space:nowrap}
+.live-indicator:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px}
+.live-indicator.connected{color:#54c891}
+.server-settings label,.channel-edit-card label{display:flex;flex-direction:column;gap:7px;margin:12px 0;color:var(--muted);font-size:12px}
+.server-settings input,.server-settings textarea{background:var(--surface-deep);border:1px solid var(--line);border-radius:7px;padding:10px;color:var(--text);width:100%}
+.server-settings textarea{min-height:75px;resize:vertical}
+.server-brand-preview{display:flex;align-items:center;gap:18px;min-height:110px;border-radius:12px;padding:20px;font-size:20px}
+.server-icon-preview{width:64px;height:64px;border-radius:18px;overflow:hidden;background:#121218;display:grid;place-items:center;flex:none}
+.server-icon-preview img{width:100%;height:100%;object-fit:cover}
+.server-colors{display:flex;gap:16px}.server-colors label{flex:1}.server-colors input{height:42px;padding:3px}
+.server-settings h3{margin-top:28px}.channel-edit-card{padding:14px;border:1px solid var(--line);border-radius:10px;margin-top:12px}
+.owner-directory{margin:24px 0}.owner-directory-search{display:flex;gap:8px}.owner-directory-search input{min-width:0;flex:1}
+.owner-account-row{padding:12px 0;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.owner-account-row>div{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}.owner-account-row small{color:var(--muted);overflow-wrap:anywhere}
+.owner-directory-pages{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
+@media(max-width:1180px){.zuzu-app .activity-panel{display:none}}
+@media(max-width:600px){.live-indicator{display:none}.zuzu-app.layout-discord .realm-rail{width:48px}.zuzu-app .sidebar{width:180px!important}}
+/* Keep long customization panels scrollable within the desktop viewport. */
+.settings-screen{grid-template-rows:minmax(0,1fr)}
+.settings-content,.settings-scroll{min-height:0}

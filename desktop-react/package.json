@@ -12,7 +12,7 @@
     "build:ui": "tsc --noEmit && vite build",
     "build:win": "npm run build:ui && node scripts/build-icon.cjs && electron-builder --win nsis zip --publish never",
     "preview": "vite preview",
-    "test": "node --test electron/versions.test.cjs electron/update-policy.test.cjs",
+    "test": "node --test electron/versions.test.cjs electron/update-policy.test.cjs scripts/live.test.mjs",
     "build:mac": "npm run build:ui && node scripts/build-platform-icons.cjs && electron-builder --mac dmg zip --x64 --arm64 --publish never",
     "build:linux": "npm run build:ui && node scripts/build-platform-icons.cjs && electron-builder --linux AppImage deb --x64 --publish never"
   },

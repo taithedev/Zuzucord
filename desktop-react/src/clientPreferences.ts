@@ -1,4 +1,9 @@
 export type ClientPreferences = {
+  layout: 'discord' | 'studio';
+  avatarShape: 'circle' | 'rounded';
+  activityWidth: number;
+  rowHeight: number;
+  saturation: number;
   highContrast: boolean;
   fontScale: number;
   desktopFriendAlerts: boolean;
@@ -13,6 +18,7 @@ export type ClientPreferences = {
 };
 const KEY='zuzucord_client_preferences_v2';
 export const DEFAULT_CLIENT_PREFERENCES:ClientPreferences = {
+  layout:'discord', avatarShape:'circle', activityWidth:288, rowHeight:62, saturation:100,
   highContrast:false, fontScale:100, desktopFriendAlerts:false,
   showActivityPanel:true, messageSpacing:'comfortable',
   messageStyle:'classic', sidebarWidth:265, cornerRadius:12,
@@ -26,6 +32,11 @@ export function readClientPreferences():ClientPreferences {
   try {
     const stored=JSON.parse(localStorage.getItem(KEY)||'{}') as Partial<ClientPreferences>;
     return {
+      layout:stored.layout==='studio'?'studio':'discord',
+      avatarShape:stored.avatarShape==='rounded'?'rounded':'circle',
+      activityWidth:bounded(stored.activityWidth,220,400,10,288),
+      rowHeight:bounded(stored.rowHeight,48,84,2,62),
+      saturation:bounded(stored.saturation,0,150,5,100),
       highContrast:stored.highContrast===true,
       fontScale:bounded(stored.fontScale,85,125,5,100),
       desktopFriendAlerts:stored.desktopFriendAlerts===true,

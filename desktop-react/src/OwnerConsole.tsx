@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Crown, Settings2, ShieldCheck } from 'lucide-react';
 import { appApi } from './api';
+import { watchTables } from './live';
 
 type EditableRole = 'developer' | 'verified' | 'beta_tester';
 type Feature = 'attachments' | 'direct_messages' | 'friend_requests' | 'server_messages' | 'social_posts';
@@ -14,6 +15,11 @@ const FEATURES: Array<{id:Feature;label:string;description:string}> = [
 ];
 
 export function OwnerConsole() {
+  const [accounts,setAccounts]=useState<Array<{user_id:string;username:string;created_at:string;roles:string[]}>>([]);
+  const [accountSearch,setAccountSearch]=useState('');
+  const [page,setPage]=useState(0);
+  const [directoryBusy,setDirectoryBusy]=useState(true);
+  const [directoryLive,setDirectoryLive]=useState(false);
   const [username,setUsername]=useState('');
   const [role,setRole]=useState<EditableRole>('verified');
   const [enable,setEnable]=useState(true);
@@ -29,7 +35,15 @@ export function OwnerConsole() {
     try{setRules(await appApi.getFeatureRules());}
     catch(e){setError(e instanceof Error?e.message:String(e));}
   };
-  useEffect(()=>{void reload();},[]);
+  useEffect(()=>{
+    let active=true;
+    const refresh=async()=>{try{const rows=await appApi.ownerAccounts(accountSearch,page);if(active){setAccounts(rows);setDirectoryBusy(false);}}
+      catch(e){if(active){setError(e instanceof Error?e.message:String(e));setDirectoryBusy(false);}}};
+    setDirectoryBusy(true);
+    const stop=watchTables('owner-directory',['zuzucord_accounts','zuzucord_user_roles'],()=>void refresh(),setDirectoryLive);
+    return ()=>{active=false;stop();};
+  },[accountSearch,page]);
+  useEffect(()=>watchTables('owner-rules',['zuzucord_feature_rules'],()=>void reload()),[]);
   const update=async(event:React.FormEvent)=>{
     event.preventDefault();setBusy(true);setError('');setNotice('');
     try{
@@ -63,6 +77,16 @@ export function OwnerConsole() {
     <div className="owner-banner"><Crown size={28}/><div><strong>ZuzuCord Owner</strong>
       <small>Verified owner permissions · enforced by Supabase</small></div></div>
     <p className="muted">Manage developer access, badges, and live feature availability. Server owners retain control of their own community roles.</p>
+    <section className="owner-directory"><h3>Account directory <span className={'live-indicator '+(directoryLive?'connected':'')}>{directoryLive?'Live':'Connecting…'}</span></h3>
+      <p className="tiny muted">All ZuzuCord accounts, newest first. Select an account to manage its platform roles.</p>
+      <label className="owner-directory-search">Search accounts<input aria-label="Search accounts" placeholder="Username" maxLength={48} value={accountSearch}
+        onChange={e=>{setAccountSearch(e.target.value);setPage(0);}}/></label>
+      {directoryBusy?<p role="status">Loading accounts…</p>:accounts.length===0?<p>No matching accounts.</p>:accounts.map(account=><div className="owner-account-row" key={account.user_id}>
+        <div><strong>{account.username}</strong><small>{account.roles.join(' · ')||'Member'} · Joined {new Date(account.created_at).toLocaleDateString()}</small><small>{account.user_id}</small></div>
+        <button className="button button-subtle" onClick={()=>setUsername(account.username)}>Manage</button></div>)}
+      <div className="owner-directory-pages"><button className="button button-subtle" disabled={page===0||directoryBusy} onClick={()=>setPage(p=>p-1)}>Previous</button>
+        <span>Page {page+1}</span><button className="button button-subtle" disabled={accounts.length<50||directoryBusy} onClick={()=>setPage(p=>p+1)}>Next</button></div>
+    </section>
     <h3 className="owner-section-title"><ShieldCheck size={18}/> Developer accounts and badges</h3>
     <form onSubmit={e=>void update(e)} className="owner-role-form">
       <label>Target username<input required placeholder="ZuzuCord username" value={username}

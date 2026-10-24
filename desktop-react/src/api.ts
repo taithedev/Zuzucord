@@ -26,8 +26,8 @@ export const client = createClient(SUPABASE_URL, PUBLIC_KEY, {
   }
 });
 
-export type Server = { id: string; name: string; description: string; owner_id: string; accent_color:string; gradient_color:string };
-export type Channel = { id: string; name: string; description: string; server_id?: string };
+export type Server = { id: string; name: string; description: string; owner_id: string; accent_color:string; gradient_color:string; icon_url:string };
+export type Channel = { id: string; name: string; description: string; server_id?: string; category?:string; position?:number };
 export type ChatAttachment = {
   attachment_path: string; attachment_name: string; attachment_type: string; attachment_size: number
 };
@@ -139,6 +139,17 @@ export async function ensureAccount(session: Session): Promise<string> {
   return username;
 }
 export const appApi = {
+  async ownerAccounts(search:string,page:number):Promise<Array<{user_id:string;username:string;created_at:string;roles:string[]}>> {
+    return checked(await client.rpc('zuzucord_owner_accounts',{p_search:search,p_page:page})) || [];
+  },
+  async saveServer(serverId:string,name:string,description:string,icon:string,accent:string,gradient:string):Promise<void> {
+    checked(await client.rpc('zuzucord_update_server',{p_server:serverId,p_name:name,p_description:description,
+      p_icon:icon,p_accent:accent,p_gradient:gradient}));
+  },
+  async saveChannel(id:string,name:string,description:string,category:string,position:number):Promise<void> {
+    checked(await client.rpc('zuzucord_update_channel',{p_channel:id,p_name:name,p_description:description,
+      p_category:category,p_position:position}));
+  },
   async presenceHeartbeat(): Promise<void> {
     checked(await client.rpc('zuzucord_presence_heartbeat'));
   },
@@ -152,12 +163,12 @@ export const appApi = {
   },
   async getServers(): Promise<Server[]> {
     return checked(await client.from('zuzucord_servers')
-      .select('id,name,description,owner_id,accent_color,gradient_color').order('created_at', { ascending: false })) || [];
+      .select('id,name,description,owner_id,accent_color,gradient_color,icon_url').order('created_at', { ascending: false })) || [];
   },
   async getChannels(serverId?: string): Promise<Channel[]> {
     const query = serverId
       ? client.from('zuzucord_server_channels')
-        .select('id,name,description,server_id').eq('server_id', serverId).order('position')
+        .select('id,name,description,server_id,category,position').eq('server_id', serverId).order('position')
       : client.from('zuzucord_rooms')
         .select('id,name,description').eq('is_public', true).order('name');
     return checked(await query) || [];
